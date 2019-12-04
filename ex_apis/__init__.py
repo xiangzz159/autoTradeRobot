@@ -13,4 +13,7 @@
 
 '''
 
-from ExAPIs.bitmex_testnet import bitmex_testnet
+import ccxt
+
+from ccxt import *
+from ex_apis.bitmex_testnet import bitmex_testnet

@@ -17,17 +17,20 @@ import time
 from functools import wraps
 
 
-def getTime():
+def get_time():
     timestamp = time.time()
     time_local = time.localtime(timestamp)
     return time.strftime("%Y-%m-%d %H:%M", time_local)
 
 
-# K线拟合
-# @kline:k线队列
-# @n:撮合数量
-# @fittingTime:撮合时间周期
-def klineFitting(kline, n, fittingTime):
+def kline_fitting(kline, n, fittingTime):
+    """
+    k线拟合
+    :param kline: k线队列
+    :param n: 撮合数量
+    :param fittingTime: 撮合时间周期
+    :return: 拟合后的k线数据
+    """
     # 毫秒时间戳转化为秒
     st = kline[0][0]
     st = int(st - st % fittingTime) + fittingTime
@@ -60,14 +63,14 @@ def klineFitting(kline, n, fittingTime):
 
 
 # 装饰器:计算函数耗时
-def funcTimer(func):
+def func_timer(func):
     @wraps(func)
-    def functionTimer(*args, **kwargs):
+    def function_timer(*args, **kwargs):
         t0 = time.time()
         result = func(*args, **kwargs)
         t1 = time.time()
-        print('\n', getTime(), "Total time running %s: %s seconds" %
+        print('\n', get_time(), "Total time running %s: %s seconds" %
               (func.__name__, str(t1 - t0)))
         return result
 
-    return functionTimer
+    return function_timer
