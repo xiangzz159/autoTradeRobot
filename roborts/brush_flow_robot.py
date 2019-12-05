@@ -35,6 +35,7 @@ class BrushFlowRobot(object):
     trades = {}
     open_orders = []
     history_orders = []
+    history_orders_len = 1000
     symbol = None
 
     def __init__(self, exapi, module, params={}):
@@ -70,6 +71,24 @@ class BrushFlowRobot(object):
         else:
             self.trades = self.exapi.fetch_trades(self.symbol)
 
+    def __fetch_openorder(self):
+        if self.exws:
+            # TODO 从exws类中获取
+            self.open_orders = self.exws.open_orders
+        else:
+            open_orders = self.exapi.fetch_open_orders(self.symbol)
+            open_order_ids = []
+            for order in open_orders:
+                open_order_ids.append(order['id'])
+            for order in self.open_orders:
+                if order['id'] not in open_order_ids:
+                    if len(self.history_orders) > self.history_orders_len:
+                        self.history_orders.remove()
+                    self.history_orders.append(order)
+                    self.logger.info("[%s] finished order:%s" % str(order))
+
+
+
     def orderbook_scheduler(self):
         if self.exapi is None and self.exws is None:
             self.logger.error("[%s] exapi and exws not loaded!" % public_tools.get_time())
@@ -104,7 +123,11 @@ class BrushFlowRobot(object):
         pass
 
     def exit(self):
-        pass
+        self.is_ready = False
+        self.exapi.cancel_all_orders()
+        self.exapi.close_position(self.symbol)
+        self.__clear_cache()
+
 
     @staticmethod
     def deep_extend(*args):
