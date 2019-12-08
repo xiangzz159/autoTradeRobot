@@ -13,7 +13,10 @@
 
 '''
 
-import ccxt
-
-from ccxt import *
 from ex_apis.bitmex_testnet import bitmex_testnet
+
+exchanges = [
+    'bitmex_testnet'
+]
+
+__all__ = exchanges

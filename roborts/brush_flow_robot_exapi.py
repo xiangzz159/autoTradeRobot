@@ -16,27 +16,33 @@
 import time
 from Tools import public_tools, price_tools
 import logging
+import asyncio
 
 
 class BrushFlowRobot(object):
     exapi = None
     exws = None
     module = None
+    symbol = None
+
     start_time = None
     end_time = None
-    orderbook_schedule_time = 0  # orderbooks轮询时间(s)
-    trades_schedule_time = 0
+
+    orderbook_schedule_time = 1  # orderbooks轮询时间(s)
+    trades_schedule_time = 1
+    order_schedule_time = 5
     cache_retention_time = 10  # 缓存数据留存时间(s)
     module_schedule_time = 1  # 策略轮询时间(s)
+
     is_ready = False
     fail_times_limit = 10
+
     # cache data
     orderbook = {}
     trades = {}
     open_orders = []
     history_orders = []
     history_orders_len = 1000
-    symbol = None
 
     def __init__(self, exapi, module, params={}):
         self.exapi = exapi
@@ -54,7 +60,7 @@ class BrushFlowRobot(object):
         self.open_orders = []
         self.history_orders = []
 
-    def __fetch_orderbook2cache(self):
+    async def __fetch_orderbook2cache(self):
         # websocket数据存储，处理要在ws类中自己定义
         if self.exws:
             # TODO 从exws类中获取
@@ -62,16 +68,19 @@ class BrushFlowRobot(object):
             pass
         else:
             self.orderbook = self.exapi.fetch_order_book(self.symbol)
+            self.logger.info(self.orderbook)
 
-    def __fetch_trades2cache(self):
+    async def __fetch_trades2cache(self):
         if self.exws:
             # TODO 从exws类中获取
             # self.trades = self.exws.trades
             pass
         else:
-            self.trades = self.exapi.fetch_trades(self.symbol)
+            params = {'reverse': True} if 'bitmex' in self.exapi.id else {}
+            self.trades = self.exapi.fetch_trades(self.symbol, params=params)
+            self.logger.info(self.trades)
 
-    def __fetch_openorder(self):
+    async def __fetch_openorder(self):
         if self.exws:
             # TODO 从exws类中获取
             self.open_orders = self.exws.open_orders
@@ -85,49 +94,84 @@ class BrushFlowRobot(object):
                     if len(self.history_orders) > self.history_orders_len:
                         self.history_orders.remove()
                     self.history_orders.append(order)
-                    self.logger.info("[%s] finished order:%s" % str(order))
+                    self.logger.info("finished order:%s" % str(order))
 
-
-
-    def orderbook_scheduler(self):
-        if self.exapi is None and self.exws is None:
-            self.logger.error("[%s] exapi and exws not loaded!" % public_tools.get_time())
+    async def orderbook_scheduler(self):
         fail_times = 0
         while self.is_ready:
             try:
-                self.__fetch_orderbook2cache()
+                await self.__fetch_orderbook2cache()
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("[%s] fetch orderbook fail:" % public_tools.get_time(), e[0], e[1])
+                self.logger.error("fetch orderbook fail:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                time.sleep(self.orderbook_schedule_time)
+                await asyncio.sleep(self.orderbook_schedule_time)
 
-    def trades_scheduler(self):
-        if self.exapi is None and self.exws is None:
-            self.logger.error("[%s] exapi and exws not loaded!" % public_tools.get_time())
+    async def trades_scheduler(self):
         fail_times = 0
         while self.is_ready:
             try:
-                self.__fetch_trades2cache()
+                await self.__fetch_trades2cache()
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("[%s] fetch trades fail:" % public_tools.get_time(), e[0], e[1])
+                self.logger.error("fetch trades fail:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                time.sleep(self.orderbook_schedule_time)
+                await asyncio.sleep(self.trades_schedule_time)
+
+    async def order_scheduler(self):
+        fail_times = 0
+        while self.is_ready:
+            try:
+                await self.__fetch_openorder()
+                fail_times = 0
+            except BaseException as e:
+                self.logger.error("fetch trades fail:%s" % (str(e)))
+                fail_times += 1
+            finally:
+                self.is_ready = True if fail_times < self.fail_times_limit else False
+                await asyncio.sleep(self.order_schedule_time)
+
+    def async_task(self):
+        loop = asyncio.get_event_loop()
+        try:
+            task = [asyncio.ensure_future(self.trades_scheduler()), asyncio.ensure_future(self.orderbook_scheduler())]
+            loop.run_until_complete(asyncio.gather(*task))
+        except BaseException as e:
+            self.logger.error("async task run error:%s" % (str(e)))
+        finally:
+            loop.close()
 
     def start(self):
-        pass
+        # 检查所需模块
+        if not (self.exapi or self.exws):
+            self.logger.error("exapi or exws can not be empty!")
+            return
+        if not self.module:
+            self.logger.error("module can not be empty!")
+            return
+        if not self.symbol:
+            self.logger.error("symbol can not be empty!")
+            return
+        try:
+            self.is_ready = True
+            self.logger.info("Start brush flow robot!")
+            self.async_task()
+        except BaseException as e:
+            self.logger.error("async task run error:%s" % (str(e)))
+        finally:
+            self.exit()
 
     def exit(self):
         self.is_ready = False
+        # 取消所有订单
         self.exapi.cancel_all_orders()
+        # 平仓
         self.exapi.close_position(self.symbol)
         self.__clear_cache()
-
 
     @staticmethod
     def deep_extend(*args):

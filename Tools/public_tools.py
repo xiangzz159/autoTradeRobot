@@ -15,6 +15,16 @@
 
 import time
 from functools import wraps
+import ccxt
+import ex_apis
+
+
+def get_exapi(excahnge_code, param={}):
+    if excahnge_code in ex_apis.exchanges:
+        return getattr(ex_apis, excahnge_code)(param)
+    elif excahnge_code in ccxt.exchanges:
+        return getattr(ccxt, excahnge_code)(param)
+    return None
 
 
 def get_time():
