@@ -17,6 +17,7 @@ import time
 from Tools import public_tools, price_tools
 import logging
 import asyncio
+import random
 
 
 class BrushFlowRobot(object):
@@ -24,6 +25,9 @@ class BrushFlowRobot(object):
     exws = None
     module = None
     symbol = None
+    min_amount = 0
+    max_amount = 100
+    amount_tick_size = 0
 
     start_time = None
     end_time = None
@@ -31,18 +35,22 @@ class BrushFlowRobot(object):
     orderbook_schedule_time = 1  # orderbooks轮询时间(s)
     trades_schedule_time = 1
     order_schedule_time = 5
-    cache_retention_time = 10  # 缓存数据留存时间(s)
     module_schedule_time = 1  # 策略轮询时间(s)
+    main_schedule_time = 1
 
     is_ready = False
     fail_times_limit = 10
 
     # cache data
     orderbook = {}
-    trades = {}
+    trades = []
     open_orders = []
     history_orders = []
     history_orders_len = 1000
+    buy_amount = 0
+    sell_amount = 0
+    buy_price = 0
+    sell_price = 0
 
     def __init__(self, exapi, module, params={}):
         self.exapi = exapi
@@ -63,7 +71,7 @@ class BrushFlowRobot(object):
     async def __fetch_orderbook2cache(self):
         # websocket数据存储，处理要在ws类中自己定义
         if self.exws:
-            # TODO 从exws类中获取
+            # 从exws类中获取
             # self.orderbook = self.exws.orderbook
             pass
         else:
@@ -72,7 +80,7 @@ class BrushFlowRobot(object):
 
     async def __fetch_trades2cache(self):
         if self.exws:
-            # TODO 从exws类中获取
+            # 从exws类中获取
             # self.trades = self.exws.trades
             pass
         else:
@@ -80,21 +88,39 @@ class BrushFlowRobot(object):
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
             self.logger.info(self.trades)
 
-    async def __fetch_openorder(self):
+    async def __fetch_orders(self):
         if self.exws:
-            # TODO 从exws类中获取
-            self.open_orders = self.exws.open_orders
+            # 从exws类中获取
+            # self.open_orders = self.exws.open_orders
+            pass
         else:
-            open_orders = self.exapi.fetch_open_orders(self.symbol)
+            orders = self.exapi.fetch_orders(self.symbol)
             open_order_ids = []
-            for order in open_orders:
-                open_order_ids.append(order['id'])
             for order in self.open_orders:
-                if order['id'] not in open_order_ids:
-                    if len(self.history_orders) > self.history_orders_len:
-                        self.history_orders.remove()
-                    self.history_orders.append(order)
-                    self.logger.info("finished order:%s" % str(order))
+                open_order_ids.append(order['id'])
+
+            # open/closed/rejected/canceled/expired
+            for order in orders:
+                if order['status'] == 'open':
+                    continue
+                elif order['status'] == 'closed':
+                    if order['id'] in open_order_ids:
+                        idx = open_order_ids.index(order['id'])
+                        open_order_ids.pop(idx)
+                        self.open_orders.pop(idx)
+                        if len(self.history_orders) > self.history_orders_len:
+                            self.history_orders.pop(0)
+                        self.history_orders.append(order)
+                        self.logger.info("finished order:%s" % str(order))
+                elif order['status'] == 'canceled':
+                    if order['id'] in open_order_ids:
+                        idx = open_order_ids.index(order['od'])
+                        open_order_ids.pop(idx)
+                        self.open_orders.pop(idx)
+
+    async def __create_order(self, symbol, type, side, amount, price=None, params={}):
+        order = self.exapi.create_order(symbol, type, side, amount, price, params)
+        self.open_orders.append(order)
 
     async def orderbook_scheduler(self):
         fail_times = 0
@@ -126,7 +152,7 @@ class BrushFlowRobot(object):
         fail_times = 0
         while self.is_ready:
             try:
-                await self.__fetch_openorder()
+                await self.__fetch_orders()
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("fetch trades fail:%s" % (str(e)))
@@ -135,10 +161,37 @@ class BrushFlowRobot(object):
                 self.is_ready = True if fail_times < self.fail_times_limit else False
                 await asyncio.sleep(self.order_schedule_time)
 
+    async def main_scheduler(self):
+        fail_times = 0
+        while self.is_ready:
+            try:
+                if self.orderbook == {} or self.trades == {}:
+                    self.logger.info("Cache date is empty!")
+                    continue
+
+                p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
+                if p and p > 0:
+                    amount = random.uniform(self.min_amount, self.max_amount)
+                    amount = price_tools.to_nearest(amount, self.amount_tick_size)
+                    loop = asyncio.get_event_loop()
+                    create_order_task = [
+                        asyncio.ensure_future(self.__create_order(self.symbol, 'limit', 'buy', amount, p)),
+                        asyncio.ensure_future(self.__create_order(self.symbol, 'limit', 'sell', amount, p))]
+                    loop.run_until_complete(create_order_task)
+                    loop.close()
+                fail_times = 0
+            except BaseException as e:
+                self.logger.error("fetch trades fail:%s" % (str(e)))
+                fail_times += 1
+            finally:
+                self.is_ready = True if fail_times < self.fail_times_limit else False
+                await asyncio.sleep(self.main_schedule_time)
+
     def async_task(self):
         loop = asyncio.get_event_loop()
         try:
-            task = [asyncio.ensure_future(self.trades_scheduler()), asyncio.ensure_future(self.orderbook_scheduler())]
+            task = [asyncio.ensure_future(self.trades_scheduler()), asyncio.ensure_future(self.orderbook_scheduler()),
+                    asyncio.ensure_future(self.main_scheduler()), asyncio.ensure_future(self.order_scheduler())]
             loop.run_until_complete(asyncio.gather(*task))
         except BaseException as e:
             self.logger.error("async task run error:%s" % (str(e)))

@@ -16,6 +16,7 @@
 from Tools import public_tools
 import logging
 from roborts.brush_flow_robot_exapi import BrushFlowRobot
+from modules.brush_flow import BrushFlow
 
 if __name__ == '__main__':
     exapi = public_tools.get_exapi("bitmex", {
@@ -31,9 +32,13 @@ if __name__ == '__main__':
     # add formatter to ch
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    robot = BrushFlowRobot(exapi, None, {
+    module = BrushFlow(1, 0.5)
+    module.logger = logger
+    robot = BrushFlowRobot(exapi, module, {
         'symbol': 'BTC/USD',
         'logger': logger,
-        'module': "1"
+        'min_amount': 0,
+        'max_amount': 100,
+        'amount_tick_size': 1
     })
     robot.start()
