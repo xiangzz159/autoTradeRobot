@@ -76,7 +76,7 @@ class BrushFlowRobot(object):
             pass
         else:
             self.orderbook = self.exapi.fetch_order_book(self.symbol)
-            self.logger.info(self.orderbook)
+            self.logger.debug(self.orderbook)
 
     async def __fetch_trades2cache(self):
         if self.exws:
@@ -86,7 +86,7 @@ class BrushFlowRobot(object):
         else:
             params = {'reverse': True} if 'bitmex' in self.exapi.id else {}
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
-            self.logger.info(self.trades)
+            self.logger.debug(self.trades)
 
     async def __fetch_orders(self):
         if self.exws:
@@ -95,6 +95,7 @@ class BrushFlowRobot(object):
             pass
         else:
             orders = self.exapi.fetch_orders(self.symbol)
+            self.logger.debug(orders)
             open_order_ids = []
             for order in self.open_orders:
                 open_order_ids.append(order['id'])
@@ -174,10 +175,9 @@ class BrushFlowRobot(object):
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
                     loop = asyncio.get_event_loop()
-                    create_order_task = [
-                        asyncio.ensure_future(self.__create_order(self.symbol, 'limit', 'buy', amount, p)),
-                        asyncio.ensure_future(self.__create_order(self.symbol, 'limit', 'sell', amount, p))]
-                    loop.run_until_complete(create_order_task)
+                    task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
+                    task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
+                    loop.run_until_complete(asyncio.wait([task1,task2]))
                     loop.close()
                 fail_times = 0
             except BaseException as e:
@@ -190,8 +190,11 @@ class BrushFlowRobot(object):
     def async_task(self):
         loop = asyncio.get_event_loop()
         try:
-            task = [asyncio.ensure_future(self.trades_scheduler()), asyncio.ensure_future(self.orderbook_scheduler()),
-                    asyncio.ensure_future(self.main_scheduler()), asyncio.ensure_future(self.order_scheduler())]
+            task = []
+            task.append(asyncio.ensure_future(self.main_scheduler()))
+            task.append(asyncio.ensure_future(self.trades_scheduler()))
+            task.append(asyncio.ensure_future(self.orderbook_scheduler()))
+            task.append(asyncio.ensure_future(self.order_scheduler()))
             loop.run_until_complete(asyncio.gather(*task))
         except BaseException as e:
             self.logger.error("async task run error:%s" % (str(e)))

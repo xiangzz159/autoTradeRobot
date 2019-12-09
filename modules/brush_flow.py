@@ -32,7 +32,7 @@ class BrushFlow(object):
         t = int(time.time())
         trade_count = 0
         for trade in trades:
-            if t - trade['timestamp'] < 10:
+            if t - trade['timestamp'] / 1000 < 10:
                 trade_count += 1
             else:
                 break
@@ -40,8 +40,8 @@ class BrushFlow(object):
             self.logger.debug("Trade count more than 10, stop trade")
             return None
 
-        bid = bids[0]  # 买1
-        ask = asks[0]  # 卖1
+        bid = bids[0][0]  # 买1
+        ask = asks[0][0]  # 卖1
         if ask - bid == self.minumun_price:
             self.logger.debug("No insert price for disk, stop trade")
             return None
