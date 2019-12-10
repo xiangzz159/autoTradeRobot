@@ -32,7 +32,7 @@ if __name__ == '__main__':
     # add formatter to ch
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    module = BrushFlow(1, 0.5)
+    module = BrushFlow(0.5, 0.1)
     module.logger = logger
     robot = BrushFlowRobot(exapi, module, {
         'symbol': 'BTC/USD',
