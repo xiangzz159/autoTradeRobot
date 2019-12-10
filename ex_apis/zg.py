@@ -374,4 +374,10 @@ class zg(Exchange):
         return {'url': url, 'method': method, 'body': body, 'headers': headers}
 
 
-
+if __name__ == '__main__':
+    ex = zg({
+        'apiKey': '',
+        'secret': ''
+    })
+    # print(ex.fetch_markets())
+    # print(ex.fetch_trades('LTC/BTC'))
