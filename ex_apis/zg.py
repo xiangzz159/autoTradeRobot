@@ -206,7 +206,7 @@ class zg(Exchange):
         return self.parse_trades(response, market, since, limit)
 
     def parse_trade(self, trade, market=None):
-        timestamp = self.safe_integer(trade, 'timestamp')
+        timestamp = self.safe_integer(trade, 'timestamp') * 1000
         price = self.safe_float(trade, 'price')
         amount = self.safe_float(trade, 'amount')
         cost = price * amount
@@ -492,19 +492,3 @@ class zg(Exchange):
         if self.is_text_response(headers):
             return http_response
         return response.content
-
-
-if __name__ == '__main__':
-    ex = zg({
-        'apiKey': '',
-        'secret': ''
-    })
-    # print(ex.fetch_markets())
-    # print(ex.fetch_trades('LTC/BTC'))
-    # print(ex.fetch_balance())
-    # print(ex.create_order('EUP/USDT', 'limit', 'buy', 100, 0.01))
-    # print(ex.create_order('EUP/USDT', 'market', 'buy', 20))
-    # print(ex.fetch_order('a1d2dfd3ce7b479087f4713184585672', 'EUP/USDT'))
-    # print(ex.fetch_open_orders('EUP/USDT'))
-    # print(ex.fetch_closed_orders('EUP/USDT'))
-    # print(ex.cancel_order('707120279aaf4d3fa8c836596f317fa6', 'EUP/USDT'))

@@ -17,6 +17,7 @@ import time
 import logging
 import random
 from Tools import price_tools
+from decimal import Decimal
 
 
 class BrushFlow(object):
@@ -34,15 +35,13 @@ class BrushFlow(object):
         for trade in trades:
             if t - trade['timestamp'] / 1000 < 10:
                 trade_count += 1
-            else:
-                break
         if trade_count > 10:
             self.logger.info("Trade count more than 10, stop trade")
             return None
 
         bid = bids[0][0]  # 买1
         ask = asks[0][0]  # 卖1
-        if ask - bid == self.minumun_price:
+        if Decimal(str(ask)) - Decimal(str(bid)) == Decimal(str(self.minumun_price)):
             self.logger.info("No insert price for disk, stop trade")
             return None
 
