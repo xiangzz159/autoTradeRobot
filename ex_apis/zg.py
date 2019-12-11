@@ -261,13 +261,13 @@ class zg(Exchange):
         code = self.safe_integer(response, 'code')
         message = self.safe_string(response, 'message')
         if response['code'] == 13 and response['message'] == '114':
-            raise ExchangeError(self.id + ' fetch balance error: Minimum order amount error')
+            raise ExchangeError(self.id + ' create order error: Minimum order amount error')
         if code != 0:
-            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+            raise ExchangeError(self.id + ' create order error: ' + message)
 
         order_info = self.safe_value(response, 'result')
         if order_info is None:
-            raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
+            raise ExchangeError(self.id + ' create order error: ' + response['message'])
         order_info['amount'] = amount
         order_info['price'] = price
         order_info['side'] = side_
@@ -316,11 +316,11 @@ class zg(Exchange):
         code = self.safe_integer(response, 'code')
         message = self.safe_string(response, 'message')
         if code != 0:
-            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+            raise ExchangeError(self.id + ' cancel order error: ' + message)
 
         result = self.safe_value(response, 'result')
         if result is None:
-            raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
+            raise ExchangeError(self.id + ' cancel order error: ' + response['message'])
         return self.extend(self.parse_order(result), {
             'id': id,
             'status': 'canceled',
@@ -337,11 +337,11 @@ class zg(Exchange):
         code = self.safe_integer(response, 'code')
         message = self.safe_string(response, 'message')
         if code != 0:
-            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+            raise ExchangeError(self.id + ' fetch order error: ' + message)
 
         result = self.safe_value(response, 'result')
         if result is None:
-            raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
+            raise ExchangeError(self.id + ' fetch order error: ' + response['message'])
         return result
 
     def fetch_open_orders(self, symbol=None, since=None, limit=None, params={}):
@@ -357,11 +357,11 @@ class zg(Exchange):
         code = self.safe_integer(response, 'code')
         message = self.safe_string(response, 'message')
         if code != 0:
-            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+            raise ExchangeError(self.id + ' fetch open orders error: ' + message)
 
         result = self.safe_value(response, 'result')
         if result is None:
-            raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
+            raise ExchangeError(self.id + ' fetch open orders error: ' + response['message'])
         records = self.safe_value(result, 'records')
         records = records if records else []
         return self.parse_orders(records, market)
@@ -379,11 +379,11 @@ class zg(Exchange):
         code = self.safe_integer(response, 'code')
         message = self.safe_string(response, 'message')
         if code != 0:
-            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+            raise ExchangeError(self.id + ' fetch close orders error: ' + message)
 
         result = self.safe_value(response, 'result')
         if result is None:
-            raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
+            raise ExchangeError(self.id + ' fetch close orders error: ' + response['message'])
         records = self.safe_value(result, 'records')
         records = records if records else []
         return self.parse_orders(records, market)
