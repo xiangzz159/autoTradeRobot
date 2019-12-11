@@ -165,7 +165,7 @@ class BrushFlowRobot(ExApiRobot):
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                wait_time = random.uniform(self.main_schedule_time[0], self.main_schedule_time[1])
+                wait_time = random.randint(self.main_schedule_time[0], self.main_schedule_time[1])
                 await asyncio.sleep(wait_time)
 
     def start(self):
