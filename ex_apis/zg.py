@@ -321,7 +321,7 @@ class zg(Exchange):
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' cancel order error: ' + response['message'])
-        return self.extend(self.parse_order(result), {
+        return self.extend(self.parse_order(result, market), {
             'id': id,
             'status': 'canceled',
         })
