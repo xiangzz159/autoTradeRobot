@@ -139,7 +139,6 @@ class BrushFlowRobot(ExApiRobot):
     async def main_scheduler(self):
         fail_times = 0
         while self.is_ready:
-            loop = asyncio.get_event_loop()
             try:
                 if self.orderbook == {} or self.trades == {}:
                     self.logger.info("Cache date is empty!")
@@ -149,9 +148,12 @@ class BrushFlowRobot(ExApiRobot):
                 if p and p > 0:
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
+                    loop = asyncio.get_event_loop()
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
-                    loop.run_until_complete(asyncio.wait([task1, task2]))
+                    if not loop.is_running():
+                        loop.run_until_complete(asyncio.wait([task1, task2]))
+                    loop.close()
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("main schedule run error:%s" % (str(e)))
@@ -159,7 +161,6 @@ class BrushFlowRobot(ExApiRobot):
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
                 await asyncio.sleep(self.main_schedule_time)
-            loop.close()
 
     def start(self):
         # 检查所需模块
