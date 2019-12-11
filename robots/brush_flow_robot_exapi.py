@@ -138,6 +138,7 @@ class BrushFlowRobot(ExApiRobot):
 
     async def main_scheduler(self):
         fail_times = 0
+        loop = asyncio.get_event_loop()
         while self.is_ready:
             try:
                 if self.orderbook == {} or self.trades == {}:
@@ -148,7 +149,6 @@ class BrushFlowRobot(ExApiRobot):
                 if p and p > 0:
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
-                    loop = asyncio.get_event_loop()
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
                     if not loop.is_running():
