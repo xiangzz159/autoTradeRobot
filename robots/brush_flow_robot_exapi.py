@@ -152,8 +152,8 @@ class BrushFlowRobot(ExApiRobot):
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
                     if not loop.is_running():
+                        loop.close()
                         loop.run_until_complete(asyncio.wait([task1, task2]))
-                    loop.close()
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("main schedule run error:%s" % (str(e)))
