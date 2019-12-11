@@ -33,7 +33,7 @@ class BrushFlowRobot(ExApiRobot):
     orderbook_schedule_time = 5  # orderbooks轮询时间(s)
     trades_schedule_time = 5
     order_schedule_time = 30
-    main_schedule_time = 30
+    main_schedule_time = [30, 60]
 
     fail_times_limit = 10
 
@@ -146,11 +146,16 @@ class BrushFlowRobot(ExApiRobot):
                     continue
 
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
+                self.logger.info('**********ask:%s, bid:%s, price:%s**********' % (
+                str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p)))
                 if p and p > 0:
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
-                    task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
-                    task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
+                    r = random.randint(0, 1)
+                    side = 'buy' if r == 0 else 'sell'
+                    reside = 'buy' if side == 'sell' else 'sell'
+                    task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
+                    task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
                     if not loop.is_running():
                         loop.close()
                         loop.run_until_complete(asyncio.wait([task1, task2]))
@@ -160,7 +165,8 @@ class BrushFlowRobot(ExApiRobot):
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                await asyncio.sleep(self.main_schedule_time)
+                wait_time = random.uniform(self.main_schedule_time[0], self.main_schedule_time[1])
+                await asyncio.sleep(wait_time)
 
     def start(self):
         # 检查所需模块
@@ -175,11 +181,11 @@ class BrushFlowRobot(ExApiRobot):
             return
         try:
             self.is_ready = True
-            self.logger.info("Start brush flow robot!")
+            self.logger.info("**********Start brush flow robot!**********")
             task = []
-            task.append(asyncio.ensure_future(self.main_scheduler()))
             task.append(asyncio.ensure_future(self.trades_scheduler()))
             task.append(asyncio.ensure_future(self.orderbook_scheduler()))
+            task.append(asyncio.ensure_future(self.main_scheduler()))
             # task.append(asyncio.ensure_future(self.order_scheduler()))
             self.async_task(task)
         except BaseException as e:
