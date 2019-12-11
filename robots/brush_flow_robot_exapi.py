@@ -18,12 +18,10 @@ from Tools import public_tools, price_tools
 import logging
 import asyncio
 import random
+from robots.robot import ExApiRobot
 
 
-class BrushFlowRobot(object):
-    exapi = None
-    exws = None
-    module = None
+class BrushFlowRobot(ExApiRobot):
     symbol = None
     min_amount = 0
     max_amount = 100
@@ -38,7 +36,6 @@ class BrushFlowRobot(object):
     module_schedule_time = 1  # 策略轮询时间(s)
     main_schedule_time = 1
 
-    is_ready = False
     fail_times_limit = 10
 
     # cache data
@@ -52,16 +49,6 @@ class BrushFlowRobot(object):
     buy_price = 0
     sell_price = 0
 
-    def __init__(self, exapi, module, params={}):
-        self.exapi = exapi
-        self.module = module
-        self.logger = logging.getLogger('root')
-        for key in params:
-            if hasattr(self, key) and isinstance(getattr(self, key), dict):
-                setattr(self, key, self.deep_extend(getattr(self, key), params[key]))
-            else:
-                setattr(self, key, params[key])
-
     def __clear_cache(self):
         self.orderbook = {}
         self.trades = {}
@@ -69,31 +56,18 @@ class BrushFlowRobot(object):
         self.history_orders = []
 
     async def __fetch_orderbook2cache(self):
-        # websocket数据存储，处理要在ws类中自己定义
-        if self.exws:
-            # 从exws类中获取
-            # self.orderbook = self.exws.orderbook
-            pass
-        else:
+        if self.exapi:
             self.orderbook = self.exapi.fetch_order_book(self.symbol)
             self.logger.debug(self.orderbook)
 
     async def __fetch_trades2cache(self):
-        if self.exws:
-            # 从exws类中获取
-            # self.trades = self.exws.trades
-            pass
-        else:
+        if self.exapi:
             params = {'reverse': True} if 'bitmex' in self.exapi.id else {}
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
             self.logger.debug(self.trades)
 
     async def __fetch_orders(self):
-        if self.exws:
-            # 从exws类中获取
-            # self.open_orders = self.exws.open_orders
-            pass
-        else:
+        if self.exapi:
             orders = self.exapi.fetch_orders(self.symbol)
             self.logger.debug(orders)
             open_order_ids = []
@@ -177,7 +151,7 @@ class BrushFlowRobot(object):
                     loop = asyncio.get_event_loop()
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
-                    loop.run_until_complete(asyncio.wait([task1,task2]))
+                    loop.run_until_complete(asyncio.wait([task1, task2]))
                     loop.close()
                 fail_times = 0
             except BaseException as e:
@@ -224,19 +198,7 @@ class BrushFlowRobot(object):
     def exit(self):
         self.is_ready = False
         # 取消所有订单
-        self.exapi.cancel_all_orders()
+        # self.exapi.cancel_all_orders()
         # 平仓
-        self.exapi.close_position(self.symbol)
+        # self.exapi.close_position(self.symbol)
         self.__clear_cache()
-
-    @staticmethod
-    def deep_extend(*args):
-        result = None
-        for arg in args:
-            if isinstance(arg, dict):
-                if not isinstance(result, dict):
-                    result = {}
-                for key in arg:
-                    result[key] = BrushFlowRobot.deep_extend(result[key] if key in result else None, arg[key])
-            else:
-                result = arg

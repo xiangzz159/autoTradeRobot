@@ -15,17 +15,17 @@
 
 from Tools import public_tools
 import logging
-from roborts.brush_flow_robot_exapi import BrushFlowRobot
+from robots.brush_flow_robot_exapi import BrushFlowRobot
 from modules.brush_flow import BrushFlow
 
 if __name__ == '__main__':
-    exapi = public_tools.get_exapi("bitmex", {
+    exapi = public_tools.get_exapi("zg", {
         'enableRateLimit': False,
         'timeout': 20000,
-        'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
+        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
     })
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     # create formatter
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     module = BrushFlow(0.5, 0.1)
     module.logger = logger
     robot = BrushFlowRobot(exapi, module, {
-        'symbol': 'BTC/USD',
+        'symbol': 'BTC/USDT',
         'logger': logger,
         'min_amount': 0,
         'max_amount': 100,

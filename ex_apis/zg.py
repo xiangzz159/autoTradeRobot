@@ -232,11 +232,12 @@ class zg(Exchange):
         balances = self.safe_value(response, 'result')
         if balances is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
-        result = {'info', response}
+        result = {'info': response}
         for key in balances.keys():
+            b = balances[key]
             account = self.account()
-            account['free'] = self.safe_float(balances[key], 'avaliable')
-            account['used'] = self.safe_float(balances[key], 'freeze') + self.safe_float(balances[key], 'other_freeze')
+            account['free'] = self.safe_float(b, 'available')
+            account['used'] = self.safe_float(b, 'freeze') + self.safe_float(b, 'other_freeze')
             code = self.safe_currency_code(key)
             result[code] = account
         return self.parse_balance(result)
@@ -256,10 +257,21 @@ class zg(Exchange):
             response = self.privatePostTradeLimit(self.extend(request, params))
         else:
             response = self.privatePostTradeMarket(self.extend(request, params))
+            price = 0
+        code = self.safe_integer(response, 'code')
+        message = self.safe_string(response, 'message')
+        if response['code'] == 13 and response['message'] == '114':
+            raise ExchangeError(self.id + ' fetch balance error: Minimum order amount error')
+        if code != 0:
+            raise ExchangeError(self.id + ' fetch balance error: ' + message)
 
         order_info = self.safe_value(response, 'result')
         if order_info is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
+        order_info['amount'] = amount
+        order_info['price'] = price
+        order_info['side'] = side_
+        order_info['type'] = type
         return self.parse_order(order_info, market)
 
     def parse_order(self, order, market=None):
@@ -268,15 +280,17 @@ class zg(Exchange):
         timestamp = int(timestamp * 1000)
         price_ = self.safe_float(order, 'price')
         deal_fee = self.safe_float(order, 'deal_fee')
-        marker_fee = self.safe_float(order, 'market_fee')
+        marker_fee = self.safe_float(order, 'maker_fee')
         taker_fee = self.safe_float(order, 'taker_fee')
         fee = deal_fee + marker_fee + taker_fee
         remaining = self.safe_float(order, 'left')
-        amount = self.safe_float(order, 'amout')
+        amount = self.safe_float(order, 'amount')
         filled = amount - remaining
         side = self.safe_integer(order, 'side')
-        side_ = 'buy' if side == 2 else 'sell'
-        type = 'limit' if marker_fee == 0 else 'market'
+        side_ = 'sell' if side == 1 else 'buy'
+        type = self.safe_string(order, 'type')
+        if type is None or type == '':
+            type = 'limit' if marker_fee == 0 else 'market'
         return {
             'info': order,
             'id': id,
@@ -300,6 +314,11 @@ class zg(Exchange):
         self.load_markets()
         market = self.market(symbol)
         response = self.privatePostTradeCancel({'order_id': id, 'market': market['id']})
+        code = self.safe_integer(response, 'code')
+        message = self.safe_string(response, 'message')
+        if code != 0:
+            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
@@ -315,7 +334,12 @@ class zg(Exchange):
             'offset': 0,
             'limit': 20
         }
-        response = self.privatePostOrderOrdersId(self.extend(request, params))
+        response = self.privatePostOrderDeals(self.extend(request, params))
+        code = self.safe_integer(response, 'code')
+        message = self.safe_string(response, 'message')
+        if code != 0:
+            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
@@ -328,9 +352,15 @@ class zg(Exchange):
         params['offset'] = 0 if 'offset' not in params else params['offset']
         request = {
             'market': market['id'],
-            'limit': limit
+            'limit': limit,
+            'offset': 0
         }
         response = self.privatePostOrderPending(self.extend(request, params))
+        code = self.safe_integer(response, 'code')
+        message = self.safe_string(response, 'message')
+        if code != 0:
+            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
@@ -346,6 +376,11 @@ class zg(Exchange):
             'limit': limit
         }
         response = self.privatePostOrderFinished(self.extend(request, params))
+        code = self.safe_integer(response, 'code')
+        message = self.safe_string(response, 'message')
+        if code != 0:
+            raise ExchangeError(self.id + ' fetch balance error: ' + message)
+
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
@@ -359,19 +394,102 @@ class zg(Exchange):
                 url += '?' + self.urlencode(params)
         else:
             headers = {
-                'Content-Type': 'multipart/form-data'
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36'
             }
             url = self.urls['api'] + '/private' + query
-            query = self.keysort(self.extend({
+            body = self.keysort(self.extend({
                 'api_key': self.apiKey
             }, params))
-            auth = self.urlencode(query)
+            auth = self.urlencode(body)
             auth += '&secret_key=' + self.secret
-            signature = self.hmac(self.encode(auth), self.encode(self.secret), hashlib.md5)
+            md5 = hashlib.md5()
+            md5.update(auth.encode("utf-8"))
+            signature = md5.hexdigest()
             signature = signature.upper()
-            url += '?' + self.rawencode(query) + '&sign=' + signature
+            body['sign'] = signature
+            # body = self.json(body)
+            # url += '?' + self.urlencode(body)
+            # body = None
 
         return {'url': url, 'method': method, 'body': body, 'headers': headers}
+
+    def fetch(self, url, method='GET', headers=None, body=None):
+        """Perform a HTTP request and return decoded JSON data"""
+        request_headers = self.prepare_request_headers(headers)
+        url = self.proxy + url
+
+        if self.verbose:
+            print("\nRequest:", method, url, request_headers, body)
+        self.logger.debug("%s %s, Request: %s %s", method, url, request_headers, body)
+
+        request_body = body
+        # if body:
+        #     body = body.encode()
+
+        self.session.cookies.clear()
+
+        http_response = None
+        http_status_code = None
+        http_status_text = None
+        json_response = None
+        try:
+            response = self.session.request(
+                method,
+                url,
+                data=body,
+                headers=request_headers,
+                timeout=int(self.timeout / 1000),
+                proxies=self.proxies,
+                verify=self.verify
+            )
+            http_response = response.text
+            http_status_code = response.status_code
+            http_status_text = response.reason
+            json_response = self.parse_json(http_response)
+            headers = response.headers
+            # FIXME remove last_x_responses from subclasses
+            if self.enableLastHttpResponse:
+                self.last_http_response = http_response
+            if self.enableLastJsonResponse:
+                self.last_json_response = json_response
+            if self.enableLastResponseHeaders:
+                self.last_response_headers = headers
+            if self.verbose:
+                print("\nResponse:", method, url, http_status_code, headers, http_response)
+            self.logger.debug("%s %s, Response: %s %s %s", method, url, http_status_code, headers, http_response)
+            response.raise_for_status()
+
+        except Timeout as e:
+            raise RequestTimeout(method + ' ' + url)
+
+        except TooManyRedirects as e:
+            raise ExchangeError(method + ' ' + url)
+
+        except SSLError as e:
+            raise ExchangeError(method + ' ' + url)
+
+        except HTTPError as e:
+            self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response,
+                               request_headers, request_body)
+            self.handle_rest_errors(http_status_code, http_status_text, http_response, url, method)
+            raise ExchangeError(method + ' ' + url)
+
+        except RequestException as e:  # base exception class
+            error_string = str(e)
+            if ('ECONNRESET' in error_string) or ('Connection aborted.' in error_string):
+                raise NetworkError(method + ' ' + url)
+            else:
+                raise ExchangeError(method + ' ' + url)
+
+        self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response,
+                           request_headers, request_body)
+        self.handle_rest_response(http_response, json_response, url, method)
+        if json_response is not None:
+            return json_response
+        if self.is_text_response(headers):
+            return http_response
+        return response.content
 
 
 if __name__ == '__main__':
@@ -381,3 +499,10 @@ if __name__ == '__main__':
     })
     # print(ex.fetch_markets())
     # print(ex.fetch_trades('LTC/BTC'))
+    # print(ex.fetch_balance())
+    # print(ex.create_order('EUP/USDT', 'limit', 'buy', 100, 0.01))
+    # print(ex.create_order('EUP/USDT', 'market', 'buy', 20))
+    # print(ex.fetch_order('a1d2dfd3ce7b479087f4713184585672', 'EUP/USDT'))
+    # print(ex.fetch_open_orders('EUP/USDT'))
+    # print(ex.fetch_closed_orders('EUP/USDT'))
+    # print(ex.cancel_order('707120279aaf4d3fa8c836596f317fa6', 'EUP/USDT'))
