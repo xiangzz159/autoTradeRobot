@@ -161,20 +161,6 @@ class BrushFlowRobot(ExApiRobot):
                 self.is_ready = True if fail_times < self.fail_times_limit else False
                 await asyncio.sleep(self.main_schedule_time)
 
-    def async_task(self):
-        loop = asyncio.get_event_loop()
-        try:
-            task = []
-            task.append(asyncio.ensure_future(self.main_scheduler()))
-            task.append(asyncio.ensure_future(self.trades_scheduler()))
-            task.append(asyncio.ensure_future(self.orderbook_scheduler()))
-            task.append(asyncio.ensure_future(self.order_scheduler()))
-            loop.run_until_complete(asyncio.gather(*task))
-        except BaseException as e:
-            self.logger.error("async task run error:%s" % (str(e)))
-        finally:
-            loop.close()
-
     def start(self):
         # 检查所需模块
         if not (self.exapi or self.exws):
@@ -189,7 +175,12 @@ class BrushFlowRobot(ExApiRobot):
         try:
             self.is_ready = True
             self.logger.info("Start brush flow robot!")
-            self.async_task()
+            task = []
+            # task.append(asyncio.ensure_future(self.main_scheduler()))
+            task.append(asyncio.ensure_future(self.trades_scheduler()))
+            task.append(asyncio.ensure_future(self.orderbook_scheduler()))
+            # task.append(asyncio.ensure_future(self.order_scheduler()))
+            self.async_task(task)
         except BaseException as e:
             self.logger.error("async task run error:%s" % (str(e)))
         finally:
@@ -197,8 +188,4 @@ class BrushFlowRobot(ExApiRobot):
 
     def exit(self):
         self.is_ready = False
-        # 取消所有订单
-        # self.exapi.cancel_all_orders()
-        # 平仓
-        # self.exapi.close_position(self.symbol)
         self.__clear_cache()

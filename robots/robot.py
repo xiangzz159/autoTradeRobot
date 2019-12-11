@@ -16,8 +16,8 @@
 import logging
 import asyncio
 
-class ExApiRobot(object):
 
+class ExApiRobot(object):
 
     def __init__(self, exapi, module, params={}):
         self.exapi = exapi
@@ -37,12 +37,20 @@ class ExApiRobot(object):
                 await func
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("fetch orderbook fail:%s" % (str(e)))
+                self.logger.error("schedule job run error:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
                 await asyncio.sleep(schedule_time)
 
+    def async_task(self, task=[]):
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(asyncio.gather(*task))
+        except BaseException as e:
+            self.logger.error("async task run error:%s" % (str(e)))
+        finally:
+            loop.close()
 
     @staticmethod
     def deep_extend(*args):
