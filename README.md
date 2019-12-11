@@ -21,3 +21,7 @@ autoTradeRobot
 
 ```
 <br>
+
+docker build -t robotimage .
+
+docker run -d -h robot --name robot --restart always --privileged=true -v /home/admin/autoTradeRobot:/src robotimage python3 -u /src/run.py

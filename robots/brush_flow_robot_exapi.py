@@ -30,11 +30,10 @@ class BrushFlowRobot(ExApiRobot):
     start_time = None
     end_time = None
 
-    orderbook_schedule_time = 1  # orderbooks轮询时间(s)
-    trades_schedule_time = 1
-    order_schedule_time = 5
-    module_schedule_time = 1  # 策略轮询时间(s)
-    main_schedule_time = 1
+    orderbook_schedule_time = 5  # orderbooks轮询时间(s)
+    trades_schedule_time = 5
+    order_schedule_time = 30
+    main_schedule_time = 30
 
     fail_times_limit = 10
 
@@ -95,7 +94,8 @@ class BrushFlowRobot(ExApiRobot):
 
     async def __create_order(self, symbol, type, side, amount, price=None, params={}):
         order = self.exapi.create_order(symbol, type, side, amount, price, params)
-        self.open_orders.append(order)
+        self.logger.info("create order: " + str(order))
+        # self.open_orders.append(order)
 
     async def orderbook_scheduler(self):
         fail_times = 0
@@ -130,7 +130,7 @@ class BrushFlowRobot(ExApiRobot):
                 await self.__fetch_orders()
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("fetch trades fail:%s" % (str(e)))
+                self.logger.error("fetch order fail:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -155,7 +155,7 @@ class BrushFlowRobot(ExApiRobot):
                     loop.close()
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("fetch trades fail:%s" % (str(e)))
+                self.logger.error("main schedule run error:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -176,7 +176,7 @@ class BrushFlowRobot(ExApiRobot):
             self.is_ready = True
             self.logger.info("Start brush flow robot!")
             task = []
-            # task.append(asyncio.ensure_future(self.main_scheduler()))
+            task.append(asyncio.ensure_future(self.main_scheduler()))
             task.append(asyncio.ensure_future(self.trades_scheduler()))
             task.append(asyncio.ensure_future(self.orderbook_scheduler()))
             # task.append(asyncio.ensure_future(self.order_scheduler()))

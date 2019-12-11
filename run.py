@@ -25,20 +25,20 @@ if __name__ == '__main__':
         # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
     })
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     # create formatter
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     # add formatter to ch
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    module = BrushFlow(0.5, 0.1)
+    module = BrushFlow(0.0001, 0.0001)
     module.logger = logger
     robot = BrushFlowRobot(exapi, module, {
-        'symbol': 'BTC/USDT',
+        'symbol': 'EUP/USDT',
         'logger': logger,
-        'min_amount': 0,
-        'max_amount': 100,
+        'min_amount': 10,
+        'max_amount': 20,
         'amount_tick_size': 1
     })
     robot.start()
