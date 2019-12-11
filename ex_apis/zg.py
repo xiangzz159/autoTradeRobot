@@ -271,7 +271,7 @@ class zg(Exchange):
         order_info['amount'] = amount
         order_info['price'] = price
         order_info['side'] = side_
-        order_info['type'] = type
+        order_info['type'] = 1 if type == 'limit' else 2
         return self.parse_order(order_info, market)
 
     def parse_order(self, order, market=None):
@@ -288,9 +288,8 @@ class zg(Exchange):
         filled = amount - remaining
         side = self.safe_integer(order, 'side')
         side_ = 'sell' if side == 1 else 'buy'
-        type = self.safe_string(order, 'type')
-        if type is None or type == '':
-            type = 'limit' if marker_fee == 0 else 'market'
+        type = self.safe_integer(order, 'type')
+        type = 'limit' if type == 1 else 'market'
         return {
             'info': order,
             'id': id,
@@ -353,7 +352,6 @@ class zg(Exchange):
         request = {
             'market': market['id'],
             'limit': limit,
-            'offset': 0
         }
         response = self.privatePostOrderPending(self.extend(request, params))
         code = self.safe_integer(response, 'code')
@@ -364,7 +362,9 @@ class zg(Exchange):
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
-        return self.parse_orders(self.safe_value(result, 'records'))
+        records = self.safe_value(result, 'records')
+        records = records if records else []
+        return self.parse_orders(records, market)
 
     def fetch_closed_orders(self, symbol=None, since=None, limit=None, params={}):
         self.load_markets()
@@ -384,7 +384,9 @@ class zg(Exchange):
         result = self.safe_value(response, 'result')
         if result is None:
             raise ExchangeError(self.id + ' fetch balance error: ' + response['message'])
-        return self.parse_orders(self.safe_value(result, 'records'))
+        records = self.safe_value(result, 'records')
+        records = records if records else []
+        return self.parse_orders(records, market)
 
     def sign(self, path, api='public', method='GET', params={}, headers=None, body=None):
         query = '/' + path
