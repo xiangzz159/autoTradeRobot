@@ -17,6 +17,7 @@ from ex_apis.bitmex_testnet import bitmex_testnet
 
 exchanges = [
     'bitmex_testnet',
+    'zg'
 ]
 
 __all__ = exchanges

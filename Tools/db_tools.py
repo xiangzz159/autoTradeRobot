@@ -146,7 +146,7 @@ class RedisClient(object):
         return self.client.lrange(key, start, end)
 
 
-class MysqlClient():
+class MysqlClient(object):
     # 初始化方法
     def __init__(self, host, port, user, password, db, charsets='utf8'):
         self.host = host

@@ -18,12 +18,11 @@ from Tools import public_tools, price_tools
 import logging
 import asyncio
 import random
+from robots.robot import ExApiRobot
+from modules.brush_flow import BrushFlow
 
 
-class BrushFlowRobot(object):
-    exapi = None
-    exws = None
-    module = None
+class BrushFlowRobot(ExApiRobot):
     symbol = None
     min_amount = 0
     max_amount = 100
@@ -32,13 +31,11 @@ class BrushFlowRobot(object):
     start_time = None
     end_time = None
 
-    orderbook_schedule_time = 1  # orderbooks轮询时间(s)
-    trades_schedule_time = 1
-    order_schedule_time = 5
-    module_schedule_time = 1  # 策略轮询时间(s)
-    main_schedule_time = 1
+    orderbook_schedule_time = 5  # orderbooks轮询时间(s)
+    trades_schedule_time = 5
+    order_schedule_time = 30
+    main_schedule_time = [30, 60]
 
-    is_ready = False
     fail_times_limit = 10
 
     # cache data
@@ -52,16 +49,6 @@ class BrushFlowRobot(object):
     buy_price = 0
     sell_price = 0
 
-    def __init__(self, exapi, module, params={}):
-        self.exapi = exapi
-        self.module = module
-        self.logger = logging.getLogger('root')
-        for key in params:
-            if hasattr(self, key) and isinstance(getattr(self, key), dict):
-                setattr(self, key, self.deep_extend(getattr(self, key), params[key]))
-            else:
-                setattr(self, key, params[key])
-
     def __clear_cache(self):
         self.orderbook = {}
         self.trades = {}
@@ -69,31 +56,18 @@ class BrushFlowRobot(object):
         self.history_orders = []
 
     async def __fetch_orderbook2cache(self):
-        # websocket数据存储，处理要在ws类中自己定义
-        if self.exws:
-            # 从exws类中获取
-            # self.orderbook = self.exws.orderbook
-            pass
-        else:
+        if self.exapi:
             self.orderbook = self.exapi.fetch_order_book(self.symbol)
             self.logger.debug(self.orderbook)
 
     async def __fetch_trades2cache(self):
-        if self.exws:
-            # 从exws类中获取
-            # self.trades = self.exws.trades
-            pass
-        else:
+        if self.exapi:
             params = {'reverse': True} if 'bitmex' in self.exapi.id else {}
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
             self.logger.debug(self.trades)
 
     async def __fetch_orders(self):
-        if self.exws:
-            # 从exws类中获取
-            # self.open_orders = self.exws.open_orders
-            pass
-        else:
+        if self.exapi:
             orders = self.exapi.fetch_orders(self.symbol)
             self.logger.debug(orders)
             open_order_ids = []
@@ -121,7 +95,8 @@ class BrushFlowRobot(object):
 
     async def __create_order(self, symbol, type, side, amount, price=None, params={}):
         order = self.exapi.create_order(symbol, type, side, amount, price, params)
-        self.open_orders.append(order)
+        self.logger.info("create order: " + str(order))
+        # self.open_orders.append(order)
 
     async def orderbook_scheduler(self):
         fail_times = 0
@@ -156,7 +131,7 @@ class BrushFlowRobot(object):
                 await self.__fetch_orders()
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("fetch trades fail:%s" % (str(e)))
+                self.logger.error("fetch order fail:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -164,6 +139,7 @@ class BrushFlowRobot(object):
 
     async def main_scheduler(self):
         fail_times = 0
+        loop = asyncio.get_event_loop()
         while self.is_ready:
             try:
                 if self.orderbook == {} or self.trades == {}:
@@ -171,35 +147,27 @@ class BrushFlowRobot(object):
                     continue
 
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
+                self.logger.info('**********ask:%s, bid:%s, price:%s**********' % (
+                str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p)))
                 if p and p > 0:
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
-                    loop = asyncio.get_event_loop()
-                    task1 = loop.create_task(self.__create_order(self.symbol, 'limit', 'buy', amount, p))
-                    task2 = loop.create_task(self.__create_order(self.symbol, 'limit', 'sell', amount, p))
-                    loop.run_until_complete(asyncio.wait([task1,task2]))
-                    loop.close()
+                    r = random.randint(0, 1)
+                    side = 'buy' if r == 0 else 'sell'
+                    reside = 'buy' if side == 'sell' else 'sell'
+                    task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
+                    task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
+                    if not loop.is_running():
+                        loop.close()
+                        loop.run_until_complete(asyncio.wait([task1, task2]))
                 fail_times = 0
             except BaseException as e:
-                self.logger.error("fetch trades fail:%s" % (str(e)))
+                self.logger.error("main schedule run error:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                await asyncio.sleep(self.main_schedule_time)
-
-    def async_task(self):
-        loop = asyncio.get_event_loop()
-        try:
-            task = []
-            task.append(asyncio.ensure_future(self.main_scheduler()))
-            task.append(asyncio.ensure_future(self.trades_scheduler()))
-            task.append(asyncio.ensure_future(self.orderbook_scheduler()))
-            task.append(asyncio.ensure_future(self.order_scheduler()))
-            loop.run_until_complete(asyncio.gather(*task))
-        except BaseException as e:
-            self.logger.error("async task run error:%s" % (str(e)))
-        finally:
-            loop.close()
+                wait_time = random.randint(self.main_schedule_time[0], self.main_schedule_time[1])
+                await asyncio.sleep(wait_time)
 
     def start(self):
         # 检查所需模块
@@ -214,8 +182,13 @@ class BrushFlowRobot(object):
             return
         try:
             self.is_ready = True
-            self.logger.info("Start brush flow robot!")
-            self.async_task()
+            self.logger.info("**********Start brush flow robot!**********")
+            task = []
+            task.append(asyncio.ensure_future(self.trades_scheduler()))
+            task.append(asyncio.ensure_future(self.orderbook_scheduler()))
+            task.append(asyncio.ensure_future(self.main_scheduler()))
+            # task.append(asyncio.ensure_future(self.order_scheduler()))
+            self.async_task(task)
         except BaseException as e:
             self.logger.error("async task run error:%s" % (str(e)))
         finally:
@@ -223,20 +196,36 @@ class BrushFlowRobot(object):
 
     def exit(self):
         self.is_ready = False
-        # 取消所有订单
-        self.exapi.cancel_all_orders()
-        # 平仓
-        self.exapi.close_position(self.symbol)
         self.__clear_cache()
 
-    @staticmethod
-    def deep_extend(*args):
-        result = None
-        for arg in args:
-            if isinstance(arg, dict):
-                if not isinstance(result, dict):
-                    result = {}
-                for key in arg:
-                    result[key] = BrushFlowRobot.deep_extend(result[key] if key in result else None, arg[key])
-            else:
-                result = arg
+
+def main():
+    exapi = public_tools.get_exapi("bitmex", {
+        'apiKey': '',
+        'secret': '',
+        'enableRateLimit': False,
+        'timeout': 20000,
+        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
+    })
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler()
+    # create formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    module = BrushFlow(0.0001, 0.0001)
+    module.logger = logger
+    robot = BrushFlowRobot(exapi, module, {
+        'symbol': 'EUP/USDT',
+        'logger': logger,
+        'min_amount': 20,
+        'max_amount': 100,
+        'amount_tick_size': 0.01,
+        'orderbook_schedule_time': 2,
+        'trades_schedule_time': 2,
+        'order_schedule_time': 30,
+        'main_schedule_time': [5, 15]
+    })
+    robot.start()

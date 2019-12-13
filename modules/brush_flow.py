@@ -17,14 +17,15 @@ import time
 import logging
 import random
 from Tools import price_tools
+from decimal import Decimal
 
 
 class BrushFlow(object):
 
-    def __init__(self, minumun_price, price_tick_size):
+    def __init__(self, minumun_price, price_tick_size, logger=None):
         self.price_tick_size = price_tick_size
         self.minumun_price = minumun_price
-        self.logger = logging.getLogger("root")
+        self.logger = logging.getLogger("root") if logger is None else logger
 
     def need_to_trade(self, bids, asks, trades):
         # 1. 盘口间有可挂单价格，用于同时下买卖单撮合
@@ -34,16 +35,14 @@ class BrushFlow(object):
         for trade in trades:
             if t - trade['timestamp'] / 1000 < 10:
                 trade_count += 1
-            else:
-                break
         if trade_count > 10:
-            self.logger.debug("Trade count more than 10, stop trade")
+            self.logger.info("Trade count more than 10, stop trade")
             return None
 
         bid = bids[0][0]  # 买1
         ask = asks[0][0]  # 卖1
-        if ask - bid == self.minumun_price:
-            self.logger.debug("No insert price for disk, stop trade")
+        if Decimal(str(ask)) - Decimal(str(bid)) == Decimal(str(self.minumun_price)):
+            self.logger.info("No insert price for disk, stop trade")
             return None
 
         p = random.uniform(bid + self.minumun_price, ask - self.minumun_price)
