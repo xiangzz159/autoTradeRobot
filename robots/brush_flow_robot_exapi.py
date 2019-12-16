@@ -19,6 +19,7 @@ import logging
 import asyncio
 import random
 from robots.robot import ExApiRobot
+from modules.brush_flow import BrushFlow
 
 
 class BrushFlowRobot(ExApiRobot):
@@ -196,3 +197,35 @@ class BrushFlowRobot(ExApiRobot):
     def exit(self):
         self.is_ready = False
         self.__clear_cache()
+
+
+def main():
+    exapi = public_tools.get_exapi("bitmex", {
+        'apiKey': '',
+        'secret': '',
+        'enableRateLimit': False,
+        'timeout': 20000,
+        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
+    })
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler()
+    # create formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    module = BrushFlow(0.0001, 0.0001)
+    module.logger = logger
+    robot = BrushFlowRobot(exapi, module, {
+        'symbol': 'EUP/USDT',
+        'logger': logger,
+        'min_amount': 20,
+        'max_amount': 100,
+        'amount_tick_size': 0.01,
+        'orderbook_schedule_time': 2,
+        'trades_schedule_time': 2,
+        'order_schedule_time': 30,
+        'main_schedule_time': [5, 15]
+    })
+    robot.start()
