@@ -94,7 +94,7 @@ class BrushFlowRobot(ExApiRobot):
 
     async def __create_order(self, symbol, type, side, amount, price=None, params={}):
         order = self.exapi.create_order(symbol, type, side, amount, price, params)
-        self.logger.info("create order: " + str(order))
+        # self.logger.info("create order: " + str(order))
         # self.open_orders.append(order)
 
     async def orderbook_scheduler(self):
@@ -146,8 +146,6 @@ class BrushFlowRobot(ExApiRobot):
                     continue
 
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
-                self.logger.info('**********ask:%s, bid:%s, price:%s**********' % (
-                str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p)))
                 if p and p > 0:
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
@@ -156,6 +154,8 @@ class BrushFlowRobot(ExApiRobot):
                     reside = 'buy' if side == 'sell' else 'sell'
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
+                    self.logger.info('**********ask:%s, bid:%s, price:%s, amount:%s**********' % (
+                        str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p), str(amount)))
                     if not loop.is_running():
                         loop.close()
                         loop.run_until_complete(asyncio.wait([task1, task2]))
