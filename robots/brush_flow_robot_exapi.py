@@ -226,8 +226,8 @@ class BrushFlowRobot(ExApiRobot):
 
 def main():
     exapi = public_tools.get_exapi("zg", {
-        'apiKey': '0cf34f75f336418088636adc15323a13',
-        'secret': 'a5fcfa992afa4bed9ac0638fc1b79288',
+        'apiKey': '*',
+        'secret': '*',
         'enableRateLimit': False,
         'timeout': 20000,
         # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
