@@ -68,19 +68,34 @@ class BrushFlowRobot(ExApiRobot):
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
             self.logger.debug(self.trades)
 
-    async def __create_order(self, symbol, type, side, amount, price=None, params={}):
+    async def __fetch_open_orders(self):
         if self.exapi:
-            order = self.exapi.create_order(symbol, type, side, amount, price, params)
+            open_orders = self.exapi.fetch_open_orders(self.symbol)
+            self.open_orders = open_orders
+
+    async def __cancel_order(self, id):
+        if self.exapi:
+            result = self.exapi.cancel_order(id, self.symbol)
+            return result
+
+    async def __fetch_balance(self):
+        balance = self.exapi.fetch_balance()
+        return balance
+
+    async def __create_order(self, symbol, type, side, amount, price=None, params={}):
+        order = self.exapi.create_order(symbol, type, side, amount, price, params)
 
     async def cancel_open_order_scheculer(self):
         fail_times = 0
-        open_orders = self.exapi.exapi.fetch_open_orders(self.symbol)
-        while self.is_ready and len(open_orders) > 0:
+        while self.is_ready:
+            await self.__fetch_open_orders()
+            if len(self.open_orders) <= 0:
+                return
             try:
                 now = int(time.time()) * 1000
                 for order in self.open_orders:
-                    if order['timestamp'] - now > 10000:
-                        result = self.exapi.cancel_order(order['id'], self.symbol)
+                    if now - order['timestamp'] > 10000:
+                        result = await self.__cancel_order(order['id'])
                         self.logger.info("cancel open order:%s, result:%s" % (order['id'], str(result)))
                 fail_times = 0
             except BaseException as e:
@@ -92,15 +107,16 @@ class BrushFlowRobot(ExApiRobot):
 
     async def fetch_balance(self):
         fail_times = 0
-        # now = int(time.time())
-        # if now % (3600 * 24) > 5:
-        #     return
+        now = int(time.time())
+        if now % (3600 * 24) > 5:
+            return
         while self.is_ready:
             try:
-                balance = self.exapi.fetch_balance()
+                balance = await self.__fetch_balance()
                 symbols = self.symbol.split('/')
-                logging.info(
-                    symbols[0] + ': ' + str(balance[symbols[0]]) + '\n' + symbols[1] + ': ' + str(balance[symbols[1]]))
+                self.logger.info(
+                    '\n' + symbols[0] + ': ' + str(balance[symbols[0]]) + '\n' + symbols[1] + ': ' + str(
+                        balance[symbols[1]]))
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("fetch orderbook fail:%s" % (str(e)))
@@ -210,6 +226,7 @@ class BrushFlowRobot(ExApiRobot):
             task.append(asyncio.ensure_future(self.cancel_open_order_scheculer()))
             task.append(asyncio.ensure_future(self.fetch_balance()))
             task.append(asyncio.ensure_future(self.main_scheduler()))
+
             # task.append(asyncio.ensure_future(self.open_disk_scheduler()))
             # task.append(asyncio.ensure_future(self.order_scheduler()))
             self.async_task(task)
