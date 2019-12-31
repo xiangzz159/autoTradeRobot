@@ -68,32 +68,19 @@ class BrushFlowRobot(ExApiRobot):
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
             self.logger.debug(self.trades)
 
-    async def __fetch_open_orders(self):
-        if self.exapi:
-            open_orders = self.exapi.fetch_open_orders(self.symbol)
-            self.open_orders = open_orders
-
-    async def __cancel_order(self, id):
-        if self.exapi:
-            result = self.exapi.cancel_order(id, self.symbol)
-            return result
-
-    async def __fetch_balance(self):
-        balance = await self.exapi.fetch_balance()
-        return balance
-
     async def __create_order(self, symbol, type, side, amount, price=None, params={}):
-        order = self.exapi.create_order(symbol, type, side, amount, price, params)
+        if self.exapi:
+            order = self.exapi.create_order(symbol, type, side, amount, price, params)
 
     async def cancel_open_order_scheculer(self):
         fail_times = 0
-        await self.__fetch_open_orders()
-        while self.is_ready and len(self.open_orders) > 0:
+        open_orders = self.exapi.exapi.fetch_open_orders(self.symbol)
+        while self.is_ready and len(open_orders) > 0:
             try:
                 now = int(time.time()) * 1000
                 for order in self.open_orders:
                     if order['timestamp'] - now > 10000:
-                        result = await self.__cancel_order(order['id'])
+                        result = self.exapi.cancel_order(order['id'], self.symbol)
                         self.logger.info("cancel open order:%s, result:%s" % (order['id'], str(result)))
                 fail_times = 0
             except BaseException as e:
@@ -105,12 +92,12 @@ class BrushFlowRobot(ExApiRobot):
 
     async def fetch_balance(self):
         fail_times = 0
-        now = int(time.time())
-        if now % (3600 * 24) > 5:
-            return
+        # now = int(time.time())
+        # if now % (3600 * 24) > 5:
+        #     return
         while self.is_ready:
             try:
-                balance = await self.__fetch_balance()
+                balance = self.exapi.fetch_balance()
                 symbols = self.symbol.split('/')
                 logging.info(
                     symbols[0] + ': ' + str(balance[symbols[0]]) + '\n' + symbols[1] + ': ' + str(balance[symbols[1]]))
