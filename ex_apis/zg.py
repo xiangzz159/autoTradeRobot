@@ -344,7 +344,7 @@ class zg(Exchange):
             raise ExchangeError(self.id + ' fetch order error: ' + response['message'])
         return result
 
-    def fetch_open_orders(self, symbol=None, since=None, limit=None, params={}):
+    def fetch_open_orders(self, symbol, since=None, limit=None, params={}):
         self.load_markets()
         market = self.market(symbol)
         limit = 20 if limit is None else limit

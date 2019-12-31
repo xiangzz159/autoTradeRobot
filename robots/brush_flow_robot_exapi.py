@@ -20,6 +20,7 @@ import asyncio
 import random
 from robots.robot import ExApiRobot
 from modules.brush_flow import BrushFlow
+import time
 
 
 class BrushFlowRobot(ExApiRobot):
@@ -32,9 +33,9 @@ class BrushFlowRobot(ExApiRobot):
     start_time = None
     end_time = None
 
-    orderbook_schedule_time = 5  # orderbooks轮询时间(s)
-    trades_schedule_time = 5
-    order_schedule_time = 30
+    normal_schedule_time = 5
+    orderbook_schedule_time = 3  # orderbooks轮询时间(s)
+    trades_schedule_time = 3
     main_schedule_time = [30, 60]
 
     fail_times_limit = 10
@@ -61,43 +62,65 @@ class BrushFlowRobot(ExApiRobot):
             self.orderbook = self.exapi.fetch_order_book(self.symbol)
             self.logger.debug(self.orderbook)
 
-    async def __fetch_trades2cache(self):
+    async def __fetch_trades(self):
         if self.exapi:
             params = {'reverse': True} if 'bitmex' in self.exapi.id else {}
             self.trades = self.exapi.fetch_trades(self.symbol, params=params)
             self.logger.debug(self.trades)
 
-    async def __fetch_orders(self):
+    async def __fetch_open_orders(self):
         if self.exapi:
-            orders = self.exapi.fetch_orders(self.symbol)
-            self.logger.debug(orders)
-            open_order_ids = []
-            for order in self.open_orders:
-                open_order_ids.append(order['id'])
+            open_orders = self.exapi.fetch_open_orders(self.symbol)
+            self.open_orders = open_orders
 
-            # open/closed/rejected/canceled/expired
-            for order in orders:
-                if order['status'] == 'open':
-                    continue
-                elif order['status'] == 'closed':
-                    if order['id'] in open_order_ids:
-                        idx = open_order_ids.index(order['id'])
-                        open_order_ids.pop(idx)
-                        self.open_orders.pop(idx)
-                        if len(self.history_orders) > self.history_orders_len:
-                            self.history_orders.pop(0)
-                        self.history_orders.append(order)
-                        self.logger.info("finished order:%s" % str(order))
-                elif order['status'] == 'canceled':
-                    if order['id'] in open_order_ids:
-                        idx = open_order_ids.index(order['od'])
-                        open_order_ids.pop(idx)
-                        self.open_orders.pop(idx)
+    async def __cancel_order(self, id):
+        if self.exapi:
+            result = self.exapi.cancel_order(id, self.symbol)
+            return result
+
+    async def __fetch_balance(self):
+        balance = await self.exapi.fetch_balance()
+        return balance
 
     async def __create_order(self, symbol, type, side, amount, price=None, params={}):
         order = self.exapi.create_order(symbol, type, side, amount, price, params)
-        # self.logger.info("create order: " + str(order))
-        # self.open_orders.append(order)
+
+    async def cancel_open_order_scheculer(self):
+        fail_times = 0
+        await self.__fetch_open_orders()
+        while self.is_ready and len(self.open_orders) > 0:
+            try:
+                now = int(time.time()) * 1000
+                for order in self.open_orders:
+                    if order['timestamp'] - now > 10000:
+                        result = await self.__cancel_order(order['id'])
+                        self.logger.info("cancel open order:%s, result:%s" % (order['id'], str(result)))
+                fail_times = 0
+            except BaseException as e:
+                self.logger.error("fetch orderbook fail:%s" % (str(e)))
+                fail_times += 1
+            finally:
+                self.is_ready = True if fail_times < self.fail_times_limit else False
+                await asyncio.sleep(self.normal_schedule_time)
+
+    async def fetch_balance(self):
+        fail_times = 0
+        now = int(time.time())
+        if now % (3600 * 24) > 5:
+            return
+        while self.is_ready:
+            try:
+                balance = await self.__fetch_balance()
+                symbols = self.symbol.split('/')
+                logging.info(
+                    symbols[0] + ': ' + str(balance[symbols[0]]) + '\n' + symbols[1] + ': ' + str(balance[symbols[1]]))
+                fail_times = 0
+            except BaseException as e:
+                self.logger.error("fetch orderbook fail:%s" % (str(e)))
+                fail_times += 1
+            finally:
+                self.is_ready = True if fail_times < self.fail_times_limit else False
+                await asyncio.sleep(self.normal_schedule_time)
 
     async def orderbook_scheduler(self):
         fail_times = 0
@@ -110,13 +133,13 @@ class BrushFlowRobot(ExApiRobot):
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                await asyncio.sleep(self.orderbook_schedule_time)
+                await asyncio.sleep(self.normal_schedule_time)
 
     async def trades_scheduler(self):
         fail_times = 0
         while self.is_ready:
             try:
-                await self.__fetch_trades2cache()
+                await self.__fetch_trades()
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("fetch trades fail:%s" % (str(e)))
@@ -124,19 +147,6 @@ class BrushFlowRobot(ExApiRobot):
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
                 await asyncio.sleep(self.trades_schedule_time)
-
-    async def order_scheduler(self):
-        fail_times = 0
-        while self.is_ready:
-            try:
-                await self.__fetch_orders()
-                fail_times = 0
-            except BaseException as e:
-                self.logger.error("fetch order fail:%s" % (str(e)))
-                fail_times += 1
-            finally:
-                self.is_ready = True if fail_times < self.fail_times_limit else False
-                await asyncio.sleep(self.order_schedule_time)
 
     async def main_scheduler(self):
         fail_times = 0
@@ -156,8 +166,8 @@ class BrushFlowRobot(ExApiRobot):
                     reside = 'buy' if side == 'sell' else 'sell'
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
-                    self.logger.info('**********ask:%s, bid:%s, price:%s, amount:%s**********' % (
-                        str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p), str(amount)))
+                    # self.logger.info('**********ask:%s, bid:%s, price:%s, amount:%s**********' % (
+                    #     str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p), str(amount)))
                     self.stop_trade_times = 0
                     if not loop.is_running():
                         loop.close()
@@ -211,7 +221,9 @@ class BrushFlowRobot(ExApiRobot):
             task.append(asyncio.ensure_future(self.trades_scheduler()))
             task.append(asyncio.ensure_future(self.orderbook_scheduler()))
             task.append(asyncio.ensure_future(self.main_scheduler()))
-            task.append(asyncio.ensure_future(self.open_disk_scheduler()))
+            task.append(asyncio.ensure_future(self.cancel_open_order_scheculer()))
+            task.append(asyncio.ensure_future(self.fetch_balance()))
+            # task.append(asyncio.ensure_future(self.open_disk_scheduler()))
             # task.append(asyncio.ensure_future(self.order_scheduler()))
             self.async_task(task)
         except BaseException as e:
@@ -226,8 +238,8 @@ class BrushFlowRobot(ExApiRobot):
 
 def main():
     exapi = public_tools.get_exapi("zg", {
-        'apiKey': '*',
-        'secret': '*',
+        'apiKey': '',
+        'secret': '',
         'enableRateLimit': False,
         'timeout': 20000,
         # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
