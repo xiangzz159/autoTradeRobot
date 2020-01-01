@@ -95,8 +95,8 @@ class BrushFlowRobot(ExApiRobot):
                 now = int(time.time()) * 1000
                 for order in self.open_orders:
                     if now - order['timestamp'] > 10000:
-                        result = await self.__cancel_order(order['id'])
-                        self.logger.info("cancel open order:%s, result:%s" % (order['id'], str(result)))
+                        await self.__cancel_order(order['id'])
+                        self.logger.info("cancel open order:%s, result:%s" % (order['id'], str(order)))
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("fetch orderbook fail:%s" % (str(e)))
