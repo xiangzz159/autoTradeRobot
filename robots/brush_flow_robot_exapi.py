@@ -29,6 +29,10 @@ class BrushFlowRobot(ExApiRobot):
     max_amount = 100
     amount_tick_size = 0
     stop_trade_times = 0
+    bid_price = 0
+    bid_amt = 0
+    ask_price = 0
+    ask_amt = 0
 
     start_time = None
     end_time = None
@@ -88,35 +92,50 @@ class BrushFlowRobot(ExApiRobot):
     async def cancel_open_order_scheculer(self):
         fail_times = 0
         while self.is_ready:
-            await self.__fetch_open_orders()
-            if len(self.open_orders) <= 0:
-                return
             try:
+                await self.__fetch_open_orders()
+                if len(self.open_orders) <= 0:
+                    continue
                 now = int(time.time()) * 1000
                 for order in self.open_orders:
                     if now - order['timestamp'] > 10000:
                         await self.__cancel_order(order['id'])
                         self.logger.info("cancel open order:%s, result:%s" % (order['id'], str(order)))
+                        if order['side'] == 'sell':
+                            ask_price = self.ask_price
+                            ask_amount = self.ask_amt
+                            self.ask_amt -= order['remaining']
+                            self.ask_price = (ask_price * ask_amount - order['price'] * order[
+                                'remaining']) / self.ask_amt
+                        else:
+                            bid_price = self.bid_price
+                            bid_amount = self.bid_amt
+                            self.bid_amt -= order['remaining']
+                            self.bid_price = (bid_price * bid_amount - order['price'] * order[
+                                'remaining']) / self.bid_amt
+
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("fetch orderbook fail:%s" % (str(e)))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
-                await asyncio.sleep(self.normal_schedule_time)
+                await asyncio.sleep(self.normal_schedule_time * 10)
 
     async def fetch_balance(self):
         fail_times = 0
-        now = int(time.time())
-        if now % (3600 * 24) > 5:
-            return
         while self.is_ready:
             try:
+                now = int(time.time())
+                if now % 1800 > 5:
+                    continue
                 balance = await self.__fetch_balance()
                 symbols = self.symbol.split('/')
                 self.logger.info(
                     '\n' + symbols[0] + ': ' + str(balance[symbols[0]]) + '\n' + symbols[1] + ': ' + str(
-                        balance[symbols[1]]))
+                        balance[symbols[
+                            1]]) + '\n' + 'ask price: %.4f, ask amount: %.4f, bid price: %.4f, bid amount: %.4f' % (
+                        self.ask_price, self.ask_amt, self.bid_price, self.bid_amt))
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("fetch orderbook fail:%s" % (str(e)))
@@ -167,6 +186,14 @@ class BrushFlowRobot(ExApiRobot):
                     r = random.randint(0, 1)
                     side = 'buy' if r == 0 else 'sell'
                     reside = 'buy' if side == 'sell' else 'sell'
+                    bid_amt = self.bid_amt
+                    ask_amt = self.ask_amt
+                    bid_price = self.bid_price
+                    ask_price = self.ask_price
+                    self.bid_amt += amount
+                    self.ask_amt += amount
+                    self.bid_price = (bid_price * bid_amt + amount * p) / (self.bid_amt)
+                    self.ask_price = (ask_price * ask_amt + amount * p) / (self.ask_amt)
                     task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
                     # self.logger.info('**********ask:%s, bid:%s, price:%s, amount:%s**********' % (
@@ -264,9 +291,8 @@ def main():
         'min_amount': 100,
         'max_amount': 500,
         'amount_tick_size': 0.01,
-        'orderbook_schedule_time': 2,
-        'trades_schedule_time': 2,
-        'order_schedule_time': 30,
-        'main_schedule_time': [5, 15]
+        'orderbook_schedule_time': 3,
+        'trades_schedule_time': 3,
+        'main_schedule_time': [8, 20]
     })
     robot.start()
