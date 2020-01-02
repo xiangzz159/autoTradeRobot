@@ -26,6 +26,7 @@ from ccxt.base.errors import ArgumentsRequired
 from ccxt.base.errors import BadSymbol
 from requests.exceptions import HTTPError, Timeout, TooManyRedirects, RequestException
 import math
+from ssl import SSLError
 import hashlib
 
 
