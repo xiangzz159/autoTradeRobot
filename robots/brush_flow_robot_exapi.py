@@ -13,7 +13,6 @@
 
 '''
 
-import time
 from Tools import public_tools, price_tools
 import logging
 import asyncio
@@ -33,6 +32,7 @@ class BrushFlowRobot(ExApiRobot):
     bid_amt = 0
     ask_price = 0
     ask_amt = 0
+    last_order_time = int(time.time())
 
     start_time = None
     end_time = None
@@ -198,12 +198,10 @@ class BrushFlowRobot(ExApiRobot):
                     task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
                     # self.logger.info('**********ask:%s, bid:%s, price:%s, amount:%s**********' % (
                     #     str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p), str(amount)))
-                    self.stop_trade_times = 0
+                    self.last_order_time = int(time.time())
                     if not loop.is_running():
                         loop.close()
                         loop.run_until_complete(asyncio.wait([task1, task2]))
-                else:
-                    self.stop_trade_times += 1
                 fail_times = 0
             except BaseException as e:
                 self.logger.error("main schedule run error:%s" % (str(e)))
@@ -217,13 +215,14 @@ class BrushFlowRobot(ExApiRobot):
         fail_times = 0
         while self.is_ready:
             try:
-                if self.stop_trade_times > 50:
+                if int(time.time()) - self.last_order_time > 10 * 60:
                     bid1, ask1 = self.orderbook['bids'][0], self.orderbook['asks'][0]
                     amount = bid1[1] if bid1[1] < ask1[1] else ask1[1]
                     price = bid1[0] if bid1[1] < ask1[1] else ask1[0]
                     side = 'sell' if bid1[1] < ask1[1] else 'buy'
                     order = self.exapi.create_order(self.symbol, 'limit', side, amount, price)
                     self.logger.info('make open disk order: ' + str(order))
+                    self.last_order_time = int(time.time())
                     fail_times = 0
             except BaseException as e:
                 self.logger.error("open_disk fail:%s" % (str(e)))
@@ -253,9 +252,8 @@ class BrushFlowRobot(ExApiRobot):
             task.append(asyncio.ensure_future(self.cancel_open_order_scheculer()))
             task.append(asyncio.ensure_future(self.fetch_balance()))
             task.append(asyncio.ensure_future(self.main_scheduler()))
+            task.append(asyncio.ensure_future(self.open_disk_scheduler()))
 
-            # task.append(asyncio.ensure_future(self.open_disk_scheduler()))
-            # task.append(asyncio.ensure_future(self.order_scheduler()))
             self.async_task(task)
         except BaseException as e:
             self.logger.error("async task run error:%s" % (str(e)))
@@ -288,8 +286,8 @@ def main():
     robot = BrushFlowRobot(exapi, module, {
         'symbol': 'EUP/USDT',
         'logger': logger,
-        'min_amount': 100,
-        'max_amount': 500,
+        'min_amount': 200,
+        'max_amount': 1000,
         'amount_tick_size': 0.01,
         'orderbook_schedule_time': 3,
         'trades_schedule_time': 3,
