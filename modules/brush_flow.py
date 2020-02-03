@@ -35,8 +35,8 @@ class BrushFlow(object):
         for trade in trades:
             if t - trade['timestamp'] / 1000 < 10:
                 trade_count += 1
-        if trade_count > 10:
-            self.logger.debug("Trade count more than 10, stop trade")
+        if trade_count > 3:
+            self.logger.debug("Trade count more than 3, stop trade")
             return None
 
         bid = bids[0][0]  # 买1
