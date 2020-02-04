@@ -38,16 +38,11 @@ class BrushFlow(object):
         if trade_count > 3:
             self.logger.debug("Trade count more than 3, stop trade")
             return None
-
+        if bids[0][1] < 10 or asks[0][1] < 10:
+            self.logger.debug("order book amount less than 10")
+            return None
         bid = bids[0][0]  # 买1
         ask = asks[0][0]  # 卖1
-        if bid[0][1] < 10:
-            p = random.uniform(bid, bid)
-            return price_tools.to_nearest(p, self.price_tick_size, self.minumun_price)
-        if ask[0][1] < 10:
-            p = random.uniform(ask, ask)
-            return price_tools.to_nearest(p, self.price_tick_size, self.minumun_price)
-
         if Decimal(str(ask)) - Decimal(str(bid)) == Decimal(str(self.minumun_price)):
             self.logger.debug("No insert price for disk, stop trade")
             return None
