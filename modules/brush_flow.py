@@ -42,9 +42,9 @@ class BrushFlow(object):
         bid = bids[0][0]  # 买1
         ask = asks[0][0]  # 卖1
         if bid[0][1] < 10:
-            return bid
+            return float(bid)
         if ask[0][1] < 10:
-            return ask
+            return float(ask)
 
         if Decimal(str(ask)) - Decimal(str(bid)) == Decimal(str(self.minumun_price)):
             self.logger.debug("No insert price for disk, stop trade")
