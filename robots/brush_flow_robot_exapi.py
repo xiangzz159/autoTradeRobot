@@ -63,8 +63,15 @@ class BrushFlowRobot(ExApiRobot):
 
     async def __fetch_orderbook2cache(self):
         if self.exapi:
-            self.orderbook = self.exapi.fetch_order_book(self.symbol)
-            self.orderbook['ts'] = int(time.time())
+            neworderbook = self.exapi.fetch_order_book(self.symbol)
+            neworderbook['ts'] = int(time.time())
+            neworderbook['cts'] = 0
+            if self.orderbook != {} and (
+                    neworderbook['bids'][0][0] != self.orderbook['bids'][0][0] or neworderbook['asks'][0][0] !=
+                    self.orderbook['asks'][0][0]):
+                neworderbook['cts'] = int(time.time())
+            self.orderbook = neworderbook
+
             self.logger.debug(self.orderbook)
 
     async def __fetch_trades(self):
@@ -182,6 +189,9 @@ class BrushFlowRobot(ExApiRobot):
                 now = int(time.time())
                 if now - self.orderbook['ts'] > 3:
                     self.logger.debug("order book cache is too old")
+                    continue
+                if now - self.orderbook['cts'] < 30:
+                    self.logger.debug("order book change quickly")
                     continue
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
                 if p and p > 0:

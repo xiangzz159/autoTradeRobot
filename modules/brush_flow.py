@@ -41,9 +41,9 @@ class BrushFlow(object):
 
         bid = bids[0][0]  # 买1
         ask = asks[0][0]  # 卖1
-        if bids[0][1] < 10:
+        if bids[0][1] < 100:
             return bid
-        if asks[0][1] < 10:
+        if asks[0][1] < 100:
             return ask
 
         if Decimal(str(ask)) - Decimal(str(bid)) == Decimal(str(self.minumun_price)):
