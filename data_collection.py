@@ -20,7 +20,7 @@ hb = ccxt.huobipro()
 exapi = public_tools.get_exapi("zg")
 while True:
     now = int(time.time())
-    if now % 60 == 0:
+    if now % 300 == 0:
         eos = hb.fetch_ohlcv('EOS/USDT', '5m')
         eos_ohlcv = eos[-2]
         eosv = float(eos_ohlcv[5])
@@ -28,8 +28,7 @@ while True:
         eup = exapi.fetch_ohlcv('EUP/USDT', '5m')
         eup_ohlcv = eup[-2]
         eupv = float(eup_ohlcv[5])
-        if eupv > 0:
-            redis_tools.set("EUP_USDTvolum_rate", eosv / eupv)
-        else:
-            redis_tools.set("EUP_USDTvolum_rate", 1)
+        rate = eosv / eupv if eupv > 0 else 1
+        redis_tools.set("EUP_USDTvolum_rate", rate)
+        print(public_tools.get_time(), 'redis push data', rate)
 
