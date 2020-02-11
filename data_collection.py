@@ -30,5 +30,4 @@ while True:
         eupv = float(eup_ohlcv[5])
         rate = eosv / eupv if eupv > 0 else 1
         redis_tools.setval("EUP_USDTvolum_rate", rate)
-        print(public_tools.get_time(), 'redis push data', rate)
-
+        time.sleep(1)
