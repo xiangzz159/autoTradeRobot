@@ -70,6 +70,10 @@ class BrushFlowRobot(ExApiRobot):
                     neworderbook['bids'][0][0] != self.orderbook['bids'][0][0] or neworderbook['asks'][0][0] !=
                     self.orderbook['asks'][0][0]):
                 neworderbook['cts'] = int(time.time())
+            elif self.orderbook != {} and (
+                    neworderbook['bids'][0][0] == self.orderbook['bids'][0][0] and neworderbook['asks'][0][0] ==
+                    self.orderbook['asks'][0][0]):
+                neworderbook['cts'] = self.orderbook['cts']
             self.orderbook = neworderbook
             self.logger.debug(self.orderbook)
 
@@ -189,7 +193,7 @@ class BrushFlowRobot(ExApiRobot):
                 if now - self.orderbook['ts'] > 3:
                     self.logger.debug("order book cache is too old")
                     continue
-                if now - self.orderbook['cts'] < 60:
+                if now - self.orderbook['cts'] < 30:
                     self.logger.debug("order book change quickly")
                     continue
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
