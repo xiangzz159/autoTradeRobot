@@ -39,6 +39,10 @@ def set(key, val):
     r = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True)
     r.set(key, json.dumps(val))
 
+def setval(key, val):
+    r = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True)
+    r.set(key, str(val))
+
 
 def rm(key):
     r = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True)
