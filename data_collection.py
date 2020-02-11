@@ -19,15 +19,13 @@ from Tools import public_tools, redis_tools
 hb = ccxt.huobipro()
 exapi = public_tools.get_exapi("zg")
 while True:
-    now = int(time.time())
-    if now % 300 == 0:
-        eos = hb.fetch_ohlcv('EOS/USDT', '5m')
-        eos_ohlcv = eos[-2]
-        eosv = float(eos_ohlcv[5])
-
-        eup = exapi.fetch_ohlcv('EUP/USDT', '5m')
-        eup_ohlcv = eup[-2]
-        eupv = float(eup_ohlcv[5])
-        rate = eosv / eupv if eupv > 0 else 1
-        redis_tools.setval("EUP_USDTvolum_rate", rate)
-        time.sleep(1)
+    eos = hb.fetch_ohlcv('EOS/USDT', '5m')
+    eos_ohlcv = eos[-1]
+    eosv = float(eos_ohlcv[5])
+    eup = exapi.fetch_ohlcv('EUP/USDT', '5m')
+    eup_ohlcv = eup[-1]
+    eupv = float(eup_ohlcv[5])
+    rate = eosv / eupv if eupv > 0 else 1
+    redis_tools.setval("EUP_USDTvolum_rate", rate)
+    time.sleep(1)
+    time.sleep(20)
