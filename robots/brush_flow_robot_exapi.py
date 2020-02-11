@@ -199,6 +199,8 @@ class BrushFlowRobot(ExApiRobot):
                     amount_rate = float(amount_rate) if amount_rate else 1
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount *= amount_rate
+                    amount = self.min_amount if amount < self.min_amount else amount
+                    amount = self.max_amount if amount > self.max_amount else amount
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
                     r = random.randint(0, 1)
                     side = 'buy' if r == 0 else 'sell'
@@ -282,14 +284,7 @@ class BrushFlowRobot(ExApiRobot):
         self.__clear_cache()
 
 
-def main():
-    exapi = public_tools.get_exapi("zg", {
-        'apiKey': '',
-        'secret': '',
-        'enableRateLimit': False,
-        'timeout': 20000,
-        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
-    })
+def main(exapi):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()

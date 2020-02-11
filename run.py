@@ -14,6 +14,14 @@
 '''
 
 import robots.brush_flow_robot_exapi as bfre
+from Tools import public_tools
 
 if __name__ == '__main__':
-    bfre.main()
+    exapi = public_tools.get_exapi("zg", {
+        'apiKey': '',
+        'secret': '',
+        'enableRateLimit': False,
+        'timeout': 20000,
+        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
+    })
+    bfre.main(exapi)
