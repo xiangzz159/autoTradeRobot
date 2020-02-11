@@ -27,5 +27,4 @@ while True:
     eupv = float(eup_ohlcv[5])
     rate = eosv / eupv if eupv > 0 else 1
     redis_tools.setval("EUP_USDTvolum_rate", rate)
-    time.sleep(1)
     time.sleep(20)
