@@ -71,7 +71,6 @@ class BrushFlowRobot(ExApiRobot):
                     self.orderbook['asks'][0][0]):
                 neworderbook['cts'] = int(time.time())
             self.orderbook = neworderbook
-
             self.logger.debug(self.orderbook)
 
     async def __fetch_trades(self):
@@ -190,7 +189,7 @@ class BrushFlowRobot(ExApiRobot):
                 if now - self.orderbook['ts'] > 3:
                     self.logger.debug("order book cache is too old")
                     continue
-                if now - self.orderbook['cts'] < 30:
+                if now - self.orderbook['cts'] < 60:
                     self.logger.debug("order book change quickly")
                     continue
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
