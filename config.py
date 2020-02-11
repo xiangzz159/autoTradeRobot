@@ -23,7 +23,7 @@ DATABASE_URI = 'mysql+pymysql://' + DB_USER + ':' + DB_PASSWORD + '@' + DB_HOST 
     DB_PORT) + '/' + DB_NAME + '?charset=utf8&autocommit=true'
 
 # Redis
-REDIS_HOST = '127.0.0.1'
+REDIS_HOST = 'redis'
 REDIS_PORT = 6379
 REDIS_PASSWORD = ''
 

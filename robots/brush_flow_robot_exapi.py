@@ -13,7 +13,7 @@
 
 '''
 
-from Tools import public_tools, price_tools
+from Tools import public_tools, price_tools, redis_tools
 import logging
 import asyncio
 import random
@@ -195,8 +195,11 @@ class BrushFlowRobot(ExApiRobot):
                     continue
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
                 if p and p > 0:
+                    amount_rate = redis_tools.get("EUP_USDTvolum_rate")
+                    amount_rate = amount_rate if amount_rate else 1
                     amount = random.uniform(self.min_amount, self.max_amount)
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
+                    amount *= amount_rate
                     r = random.randint(0, 1)
                     side = 'buy' if r == 0 else 'sell'
                     reside = 'buy' if side == 'sell' else 'sell'
@@ -300,11 +303,12 @@ def main():
     robot = BrushFlowRobot(exapi, module, {
         'symbol': 'EUP/USDT',
         'logger': logger,
-        'min_amount': 200,
-        'max_amount': 1000,
+        'min_amount': 800,
+        'max_amount': 3000,
         'amount_tick_size': 0.01,
         'orderbook_schedule_time': 3,
         'trades_schedule_time': 3,
-        'main_schedule_time': [8, 20]
+        'main_schedule_time': [7, 18]
     })
     robot.start()
+
