@@ -198,7 +198,7 @@ class BrushFlowRobot(ExApiRobot):
                     amount_rate = redis_tools.get("EUP_USDTvolum_rate")
                     amount_rate = float(amount_rate) if amount_rate else 1
                     amount = random.uniform(self.min_amount, self.max_amount)
-                    amount *= amount_rate
+                    # amount *= amount_rate
                     amount = self.min_amount if amount < self.min_amount else amount
                     amount = self.max_amount if amount > self.max_amount else amount
                     amount = price_tools.to_nearest(amount, self.amount_tick_size)
