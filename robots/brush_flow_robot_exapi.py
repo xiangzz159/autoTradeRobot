@@ -197,7 +197,7 @@ class BrushFlowRobot(ExApiRobot):
                     self.logger.debug("order book cache is too old")
                     continue
                 if now - self.orderbook['cts'] < 60:
-                    self.logger.info("order book change quickly")
+                    self.logger.debug("order book change quickly")
                     continue
                 p = self.module.need_to_trade(self.orderbook['bids'], self.orderbook['asks'], self.trades)
                 if p and p > 0:
