@@ -246,6 +246,7 @@ class BrushFlowRobot(ExApiRobot):
                 if int(time.time()) - self.last_order_time > 10 * 60:
                     bid1, ask1 = self.orderbook['bids'][0], self.orderbook['asks'][0]
                     amount = bid1[1] if bid1[1] < ask1[1] else ask1[1]
+                    amount = amount if amount < self.max_amount else self.min_amount
                     price = bid1[0] if bid1[1] < ask1[1] else ask1[0]
                     side = 'sell' if bid1[1] < ask1[1] else 'buy'
                     order = self.exapi.create_order(self.symbol, 'limit', side, amount, price)
