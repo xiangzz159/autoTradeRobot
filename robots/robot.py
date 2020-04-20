@@ -15,7 +15,7 @@
 
 import logging
 import asyncio
-
+import traceback
 
 class ExApiRobot(object):
 
@@ -36,8 +36,8 @@ class ExApiRobot(object):
             try:
                 await func
                 fail_times = 0
-            except BaseException as e:
-                self.logger.error("schedule job run error:%s" % (str(e)))
+            except:
+                self.logger.error("schedule job run error:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -47,8 +47,8 @@ class ExApiRobot(object):
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(asyncio.gather(*task))
-        except BaseException as e:
-            self.logger.error("async task run error:%s" % (str(e)))
+        except:
+            self.logger.error("async task run error:%s" % str(traceback.format_exc()))
         finally:
             loop.close()
 

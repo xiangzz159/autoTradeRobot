@@ -20,6 +20,7 @@ import random
 from robots.robot import ExApiRobot
 from modules.brush_flow import BrushFlow
 import time
+import traceback
 
 
 class BrushFlowRobot(ExApiRobot):
@@ -129,8 +130,8 @@ class BrushFlowRobot(ExApiRobot):
                                 'remaining']) / self.bid_amt
 
                 fail_times = 0
-            except BaseException as e:
-                self.logger.error("fetch orderbook fail:%s" % (str(e)))
+            except:
+                self.logger.error("fetch orderbook fail:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -151,8 +152,8 @@ class BrushFlowRobot(ExApiRobot):
                             1]]) + '\n' + 'ask price: %.4f, ask amount: %.4f, bid price: %.4f, bid amount: %.4f' % (
                         self.ask_price, self.ask_amt, self.bid_price, self.bid_amt))
                 fail_times = 0
-            except BaseException as e:
-                self.logger.error("fetch orderbook fail:%s" % (str(e)))
+            except:
+                self.logger.error("fetch orderbook fail:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -164,8 +165,8 @@ class BrushFlowRobot(ExApiRobot):
             try:
                 await self.__fetch_orderbook2cache()
                 fail_times = 0
-            except BaseException as e:
-                self.logger.error("fetch orderbook fail:%s" % (str(e)))
+            except:
+                self.logger.error("fetch orderbook fail:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -177,8 +178,8 @@ class BrushFlowRobot(ExApiRobot):
             try:
                 await self.__fetch_trades()
                 fail_times = 0
-            except BaseException as e:
-                self.logger.error("fetch trades fail:%s" % (str(e)))
+            except:
+                self.logger.error("fetch trades fail:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -230,8 +231,8 @@ class BrushFlowRobot(ExApiRobot):
                         loop.close()
                         loop.run_until_complete(asyncio.wait([task1, task2]))
                 fail_times = 0
-            except BaseException as e:
-                self.logger.error("main schedule run error:%s" % (str(e)))
+            except:
+                self.logger.error("main schedule run error:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -251,8 +252,8 @@ class BrushFlowRobot(ExApiRobot):
                     self.logger.info('make open disk order: ' + str(order))
                     self.last_order_time = int(time.time())
                     fail_times = 0
-            except BaseException as e:
-                self.logger.error("open_disk fail:%s" % (str(e)))
+            except:
+                self.logger.error("open_disk fail:%s" % str(traceback.format_exc()))
                 fail_times += 1
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
@@ -282,8 +283,8 @@ class BrushFlowRobot(ExApiRobot):
             task.append(asyncio.ensure_future(self.open_disk_scheduler()))
 
             self.async_task(task)
-        except BaseException as e:
-            self.logger.error("async task run error:%s" % (str(e)))
+        except:
+            self.logger.error("async task run error:%s" % str(traceback.format_exc()))
         finally:
             self.exit()
 
