@@ -264,11 +264,13 @@ class zg(Exchange):
             'symbol': market['id'],
             'side': side.upper(),
             'quantity': str(amount),
-            'type': type.upper()
+            'type': type.upper(),
+            'timestamp': self.milliseconds()
         }
         if type == 'limit':
             request['price'] = price
-        order_info = self.privatePostOrder(self.extend(request, params))
+            request['timeInForce'] = 'GTC'
+        order_info = self.privatePostOrderTest(self.extend(request, params))
         return self.parse_order(order_info, market)
 
     def parse_order(self, order, market=None):
@@ -405,20 +407,80 @@ class zg(Exchange):
         return {'url': url, 'method': method, 'body': body, 'headers': headers}
 
 
-if __name__ == '__main__':
-    exapi = zg({
-        # 'apiKey': '0cf34f75f336418088636adc15323a13',
-        # 'secret': 'a5fcfa992afa4bed9ac0638fc1b79288',
-        'apiKey': 'tAQfOrPIZAhym0qHISRt8EFvxPemdBm5j5WMlkm3Ke9aFp0EGWC2CGM8GHV4kCYW',
-        'secret': 'lH3ELTNiFxCQTmi9pPcWWikhsjO04Yoqw3euoHUuOLC3GYBW64ZqzQsiOEHXQS76',
-        'enableRateLimit': False,
-        'timeout': 20000,
-        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
-    })
-    # print(exapi.fetch_markets())
-    # print(exapi.fetch_order_book("ADA/BTC"))
-    # print(exapi.fetch_ohlcv("ADA/BTC"))
-    # print(exapi.fetch_balance())
-    print(exapi.create_order('ETH/BTC', 'limit', 'buy', 1, 0.1, params={'recvWindow': 5000,
-                                                                        'timestamp': 1538323200000}))
+    def fetch(self, url, method='GET', headers=None, body=None):
+        """Perform a HTTP request and return decoded JSON data"""
+        request_headers = self.prepare_request_headers(headers)
+        url = self.proxy + url
+
+        if self.verbose:
+            print("\nRequest:", method, url, request_headers, body)
+        self.logger.debug("%s %s, Request: %s %s", method, url, request_headers, body)
+
+        request_body = body
+        # if body:
+        #     body = body.encode()
+
+        self.session.cookies.clear()
+
+        http_response = None
+        http_status_code = None
+        http_status_text = None
+        json_response = None
+        try:
+            response = self.session.request(
+                method,
+                url,
+                data=body,
+                headers=request_headers,
+                timeout=int(self.timeout / 1000),
+                proxies=self.proxies,
+                verify=self.verify
+            )
+            http_response = response.text
+            http_status_code = response.status_code
+            http_status_text = response.reason
+            json_response = self.parse_json(http_response)
+            headers = response.headers
+            # FIXME remove last_x_responses from subclasses
+            if self.enableLastHttpResponse:
+                self.last_http_response = http_response
+            if self.enableLastJsonResponse:
+                self.last_json_response = json_response
+            if self.enableLastResponseHeaders:
+                self.last_response_headers = headers
+            if self.verbose:
+                print("\nResponse:", method, url, http_status_code, headers, http_response)
+            self.logger.debug("%s %s, Response: %s %s %s", method, url, http_status_code, headers, http_response)
+            response.raise_for_status()
+
+        except Timeout as e:
+            raise RequestTimeout(method + ' ' + url)
+
+        except TooManyRedirects as e:
+            raise ExchangeError(method + ' ' + url)
+
+        except SSLError as e:
+            raise ExchangeError(method + ' ' + url)
+
+        except HTTPError as e:
+            self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response,
+                               request_headers, request_body)
+            self.handle_rest_errors(http_status_code, http_status_text, http_response, url, method)
+            raise ExchangeError(method + ' ' + url)
+
+        except RequestException as e:  # base exception class
+            error_string = str(e)
+            if ('ECONNRESET' in error_string) or ('Connection aborted.' in error_string):
+                raise NetworkError(method + ' ' + url)
+            else:
+                raise ExchangeError(method + ' ' + url)
+
+        self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response,
+                           request_headers, request_body)
+        self.handle_rest_response(http_response, json_response, url, method)
+        if json_response is not None:
+            return json_response
+        if self.is_text_response(headers):
+            return http_response
+        return response.content
 
