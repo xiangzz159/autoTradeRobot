@@ -1654,7 +1654,7 @@ class zg(Exchange):
         if path == 'historicalTrades':
             if self.apiKey:
                 headers = {
-                    'X-MBX-APIKEY': self.apiKey,
+                    'X-BH-APIKEY': self.apiKey,
                 }
             else:
                 raise AuthenticationError(self.id + ' historicalTrades endpoint requires `apiKey` credential')
@@ -1663,7 +1663,7 @@ class zg(Exchange):
                 # v1 special case for userDataStream
                 body = self.urlencode(params)
                 headers = {
-                    'X-MBX-APIKEY': self.apiKey,
+                    'X-BH-APIKEY': self.apiKey,
                     'Content-Type': 'application/x-www-form-urlencoded',
                 }
             else:
@@ -1690,7 +1690,7 @@ class zg(Exchange):
             signature = self.hmac(self.encode(query), self.encode(self.secret))
             query += '&' + 'signature=' + signature
             headers = {
-                'X-MBX-APIKEY': self.apiKey,
+                'X-BH-APIKEY': self.apiKey,
             }
             if (method == 'GET') or (method == 'DELETE') or (api == 'wapi'):
                 url += '?' + query
@@ -1781,5 +1781,5 @@ if __name__ == '__main__':
     # print(ex.fetch_ohlcv('ADA/USDT', '5m', 500))
     # print(ex.fetch_trades('ADA/USDT'))
 
-    # print(ex.fetch_balance())
+    print(ex.fetch_balance())
     # print(ex.create_order('ADA/USDT', 'limit', 'buy', 1, 0.01, {'test': True}))
