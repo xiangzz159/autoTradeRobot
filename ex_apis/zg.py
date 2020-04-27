@@ -561,15 +561,13 @@ class zg(Exchange):
                 result[code] = account
         return self.parse_balance(result)
 
-    def fetch_order_book(self, symbol, limit=None, params={}):
+    def fetch_order_book(self, symbol, limit=500, params={}):
         self.load_markets()
         market = self.market(symbol)
         request = {
             'symbol': market['id'],
+            'limit': limit
         }
-        if limit is not None:
-            request[
-                'limit'] = limit  # default 100, max 5000, see https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md#order-book
         method = 'publicGetDepth' if market['spot'] else 'fapiPublicGetDepth'
         response = getattr(self, method)(self.extend(request, params))
         orderbook = self.parse_order_book(response)
@@ -1008,10 +1006,6 @@ class zg(Exchange):
                 method += 'Test'
                 params = self.omit(params, 'test')
         uppercaseType = type.upper()
-        validOrderTypes = self.safe_value(market['info'], 'orderTypes')
-        if not self.in_array(uppercaseType, validOrderTypes):
-            raise InvalidOrder(
-                self.id + ' ' + type + ' is not a valid order type in ' + market['type'] + ' market ' + symbol)
         request = {
             'symbol': market['id'],
             'type': uppercaseType,
@@ -1763,23 +1757,3 @@ class zg(Exchange):
             self.options['hasAlreadyAuthenticatedSuccessfully'] = True
         return response
 
-
-if __name__ == '__main__':
-    ex = zg({
-        'apiKey': '',
-        'secret': '',
-        'enableRateLimit': False,
-        'timeout': 20000,
-        # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
-    })
-
-    # markets = ex.fetch_markets()
-    # for m in markets:
-    #     print(m)
-    # print(ex.fetch_order_book('ADA/USDT', 500))
-    # print(ex.fetch_ticker('ADA/USDT'))
-    # print(ex.fetch_ohlcv('ADA/USDT', '5m', 500))
-    # print(ex.fetch_trades('ADA/USDT'))
-
-    print(ex.fetch_balance())
-    # print(ex.create_order('ADA/USDT', 'limit', 'buy', 1, 0.01, {'test': True}))

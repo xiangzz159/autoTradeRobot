@@ -83,8 +83,9 @@ class BrushFlowRobot(ExApiRobot):
 
     async def __fetch_trades(self):
         if self.exapi:
-            params = {'reverse': True} if 'bitmex' in self.exapi.id else {}
-            self.trades = self.exapi.fetch_trades(self.symbol, params=params)
+            trades = self.exapi.fetch_trades(self.symbol)
+            trades = trades[::-1]
+            self.trades = trades
             self.logger.debug(self.trades)
 
     async def __fetch_open_orders(self):
