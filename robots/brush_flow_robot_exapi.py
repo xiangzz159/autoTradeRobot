@@ -223,15 +223,14 @@ class BrushFlowRobot(ExApiRobot):
                     self.ask_amt += amount
                     self.bid_price = (bid_price * bid_amt + amount * p) / (self.bid_amt)
                     self.ask_price = (ask_price * ask_amt + amount * p) / (self.ask_amt)
-                    self.logger.info("create order %.6f @ %.4f" % (p, amount))
-                    # task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
-                    # task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
+                    task1 = loop.create_task(self.__create_order(self.symbol, 'limit', side, amount, p))
+                    task2 = loop.create_task(self.__create_order(self.symbol, 'limit', reside, amount, p))
                     # self.logger.info('**********ask:%s, bid:%s, price:%s, amount:%s**********' % (
                     #     str(self.orderbook['asks'][0][0]), str(self.orderbook['bids'][0][0]), str(p), str(amount)))
                     self.last_order_time = int(time.time())
-                    # if not loop.is_running():
-                    #     loop.close()
-                    #     loop.run_until_complete(asyncio.wait([task1, task2]))
+                    if not loop.is_running():
+                        loop.close()
+                        loop.run_until_complete(asyncio.wait([task1, task2]))
                 fail_times = 0
             except:
                 self.logger.error("main schedule run error:%s" % str(traceback.format_exc()))
