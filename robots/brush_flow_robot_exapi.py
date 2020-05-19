@@ -282,7 +282,7 @@ class BrushFlowRobot(ExApiRobot):
             task.append(asyncio.ensure_future(self.cancel_open_order_scheculer()))
             task.append(asyncio.ensure_future(self.fetch_balance()))
             task.append(asyncio.ensure_future(self.main_scheduler()))
-            task.append(asyncio.ensure_future(self.open_disk_scheduler()))
+            # task.append(asyncio.ensure_future(self.open_disk_scheduler()))
 
             self.async_task(task)
         except:
