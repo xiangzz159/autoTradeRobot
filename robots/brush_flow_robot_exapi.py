@@ -150,7 +150,7 @@ class BrushFlowRobot(ExApiRobot):
                 self.logger.info(
                     '\n' + symbols[0] + ': ' + str(balance[symbols[0]]) + '\n' + symbols[1] + ': ' + str(
                         balance[symbols[
-                            1]]) + '\n' + 'ask price: %.4f, ask amount: %.4f, bid price: %.4f, bid amount: %.4f' % (
+                            1]]) + '\n' + 'ask price: %.6f, ask amount: %.4f, bid price: %.6f, bid amount: %.4f' % (
                         self.ask_price, self.ask_amt, self.bid_price, self.bid_amt))
                 fail_times = 0
             except:
@@ -304,7 +304,7 @@ def main(exapi):
     # add formatter to ch
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    module = BrushFlow(0.0001, 0.0001)
+    module = BrushFlow(0.000001, 0.000001)
     module.logger = logger
     robot = BrushFlowRobot(exapi, module, {
         'symbol': 'EUP/USDT',
