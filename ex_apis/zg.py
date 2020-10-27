@@ -1053,3 +1053,6 @@ class zg(Exchange):
             if price is None:
                 raise InvalidOrder(self.id + ' createOrder method requires a price argument for a ' + type + ' order')
             request['price'] = self.price_to_p
+
+    def sign(self, path, api='public', method='GET', params={}, headers=None, body=None):
+        pass
