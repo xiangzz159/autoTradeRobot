@@ -309,8 +309,8 @@ def main(exapi):
     robot = BrushFlowRobot(exapi, module, {
         'symbol': 'EUP/USDT',
         'logger': logger,
-        'min_amount': 800,
-        'max_amount': 3000,
+        'min_amount': 3000,
+        'max_amount': 10000,
         'amount_tick_size': 0.01,
         'orderbook_schedule_time': 3,
         'trades_schedule_time': 3,
