@@ -64,6 +64,7 @@ class KdjNotifyRobot(ExApiRobot):
                             self.notifyed = self.notifyed[-10:]
                         self.logger.info("notifyed append key:%s" % (str(v.get('last_timestamp')) + '-' + k))
                         self.notifyed.append(v.get('last_timestamp') + '-' + k)
+                        fail_times = 0
                     except:
                         self.logger.error("notify schedule fail:%s" % str(traceback.format_exc()))
                         fail_times += 1
@@ -73,7 +74,7 @@ class KdjNotifyRobot(ExApiRobot):
 
     async def kdj_schedule(self):
         while self.is_ready:
-            self.logger.info("kdj_schedule keys:%s" % str(self.kline.keys))
+            self.logger.info("kdj_schedule keys:%s" % str(self.kline.keys()))
             for k in self.kline.keys():
                 kl = self.kline.get(k)
                 self.logger.info("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
