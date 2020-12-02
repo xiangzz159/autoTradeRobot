@@ -31,6 +31,7 @@ class KdjNotifyRobot(ExApiRobot):
     notifies = {}
     notifyed = []
     template_id = None
+    fail_times_limit = 10
 
     async def __fetch_ohlcv(self, timeframe='15m'):
         if self.exapi:
@@ -129,9 +130,8 @@ class KdjNotifyRobot(ExApiRobot):
             self.logger.info("**********Start KDJ notify robot robot!**********")
             task = []
             task.append(asyncio.ensure_future(self.ohlcv_schedule()))
-            task.append(asyncio.ensure_future(self.notify_schedule()))
             task.append(asyncio.ensure_future(self.kdj_schedule()))
-
+            task.append(asyncio.ensure_future(self.notify_schedule()))
             self.async_task(task)
         except:
             self.logger.error("async task run error:%s" % str(traceback.format_exc()))
