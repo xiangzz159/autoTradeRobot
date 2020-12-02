@@ -54,7 +54,7 @@ class KdjNotifyRobot(ExApiRobot):
         while self.is_ready:
             for k in self.notifies.keys():
                 v = self.notifies.get(k)
-                if str(v.get('last_timestamp') + '-' + k) not in self.notifyed:
+                if str(v.get('last_timestamp')) + '-' + k not in self.notifyed:
                     try:
                         # SMS通知
                         self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
