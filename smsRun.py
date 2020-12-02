@@ -13,16 +13,14 @@
 
 '''
 
-import robots.brush_flow_robot_exapi as bfre
+import robots.kdj_notify_robot as kdjr
 from Tools import public_tools
 
 if __name__ == '__main__':
-    exapi = public_tools.get_exapi("zg", {
-        'apiKey': 'RX8ag4wOlDXiRkeOqgkYbGZmYEvQ5E5fJLAb22gaSjVNSx4lCN14P2rQc8tLTFU9',
-        'secret': 'sNpHcjhaiVExvgPBtoiaoVwI7hXSmL91KxFeTLs0FWc6b9NKBGRHKkW2zvSddjPV',
+    exapi = public_tools.get_exapi("huobipro", {
         'enableRateLimit': False,
         'timeout': 20000,
         # 'proxies': {"http": "http://127.0.0.1:1080", "https": "http://127.0.0.1:1080"}
     })
-    bfre.main(exapi)
+    kdjr.main(exapi)
 
