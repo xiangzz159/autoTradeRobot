@@ -43,7 +43,7 @@ class KdjNotifyRobot(ExApiRobot):
                 self.kline[timeframe] = kline
 
     def __notify(self, *args):
-        self.logger.info("send sms notify:" + args)
+        self.logger.debug("send sms notify:" + args)
 
     async def notify_schedule(self):
         fail_times = 0
@@ -56,7 +56,9 @@ class KdjNotifyRobot(ExApiRobot):
                         self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
                         # 放入已通知列表
                         if len(self.notifyed) > 10:
+                            self.logger.debug("notifyed length is more than 10")
                             self.notifyed = self.notifyed[-10:]
+                        self.logger.debug("notifyed append key:%s" % (str(v.get('last_timestamp')) + '-' + k))
                         self.notifyed.append(v.get('last_timestamp') + '-' + k)
                     except:
                         self.logger.error("notify schedule fail:%s" % str(traceback.format_exc()))
@@ -69,12 +71,14 @@ class KdjNotifyRobot(ExApiRobot):
         while self.is_ready:
             for k in self.kline.keys():
                 kl = self.kline.get(k)
+                self.logger.debug("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
                 notify = self.notifies.get(k)
                 if self.kline.get(k) is None:
                     continue
                 if notify is not None and notify.get('last_timestamp') == kl[-1][0]:
                     continue
                 row = KDJ.analyze(kl)
+                self.logger.debug('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']) )
                 if row['signal'] != 'wait':
                     signal = '金' if row['signal'] == 'long' else '死'
                     ex_name = self.exapi.id
@@ -85,7 +89,7 @@ class KdjNotifyRobot(ExApiRobot):
                         'val4': k,
                         'last_timestamp': kl[-1][0]
                     }
-                    self.logger.info("update notifies: %s" % str(self.notifies))
+                    self.logger.debug("kdj_schedule-update notifies: %s" % str(self.notifies))
                 try:
                     await asyncio.sleep(1)
                 except:
@@ -137,7 +141,7 @@ class KdjNotifyRobot(ExApiRobot):
 
 def main(exapi):
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     # create formatter
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
