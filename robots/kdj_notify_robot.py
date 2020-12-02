@@ -63,7 +63,7 @@ class KdjNotifyRobot(ExApiRobot):
                             self.logger.info("notifyed length is more than 10")
                             self.notifyed = self.notifyed[-10:]
                         self.logger.info("notifyed append key:%s" % (str(v.get('last_timestamp')) + '-' + k))
-                        self.notifyed.append(v.get('last_timestamp') + '-' + k)
+                        self.notifyed.append(str(v.get('last_timestamp')) + '-' + k)
                         fail_times = 0
                     except:
                         self.logger.error("notify schedule fail:%s" % str(traceback.format_exc()))
