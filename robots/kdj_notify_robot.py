@@ -75,31 +75,32 @@ class KdjNotifyRobot(ExApiRobot):
     async def kdj_schedule(self):
         while self.is_ready:
             self.logger.info("kdj_schedule keys:%s" % str(self.kline.keys()))
-            for k in self.kline.keys():
-                kl = self.kline.get(k)
-                self.logger.info("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
-                notify = self.notifies.get(k)
-                if self.kline.get(k) is None:
-                    continue
-                if notify is not None and notify.get('last_timestamp') == kl[-1][0]:
-                    continue
-                row = KDJ.analyze(kl)
-                self.logger.info('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']) )
-                if row['signal'] != 'wait':
-                    signal = '金' if row['signal'] == 'long' else '死'
-                    ex_name = self.exapi.id
-                    self.notifies[k] = {
-                        'val1': ex_name,
-                        'val2': self.symbol,
-                        'val3': signal,
-                        'val4': k,
-                        'last_timestamp': kl[-1][0]
-                    }
-                    self.logger.info("kdj_schedule-update notifies: %s" % str(self.notifies))
-                try:
-                    await asyncio.sleep(1)
-                except:
-                    self.logger.error("kdj schedule fail:%s" % str(traceback.format_exc()))
+            try:
+                for k in self.kline.keys():
+                    kl = self.kline.get(k)
+                    self.logger.info("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
+                    notify = self.notifies.get(k)
+                    if self.kline.get(k) is None:
+                        continue
+                    if notify is not None and notify.get('last_timestamp') == kl[-1][0]:
+                        continue
+                    row = KDJ.analyze(kl)
+                    self.logger.info('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']) )
+                    if row['signal'] != 'wait':
+                        signal = '金' if row['signal'] == 'long' else '死'
+                        ex_name = self.exapi.id
+                        self.notifies[k] = {
+                            'val1': ex_name,
+                            'val2': self.symbol,
+                            'val3': signal,
+                            'val4': k,
+                            'last_timestamp': kl[-1][0]
+                        }
+                        self.logger.info("kdj_schedule-update notifies: %s" % str(self.notifies))
+            except:
+                self.logger.error("kdj schedule fail:%s" % str(traceback.format_exc()))
+            finally:
+                await asyncio.sleep(1)
 
     async def ohlcv_schedule(self):
         fail_times = 0
