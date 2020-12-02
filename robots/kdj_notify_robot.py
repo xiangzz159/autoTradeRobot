@@ -13,12 +13,11 @@
 
 '''
 
-
 import logging
 import asyncio
 import random
 from robots.robot import ExApiRobot
-from modules.brush_flow import BrushFlow
+from modules.TencentSMS import TencentSMS
 import time
 import traceback
 from modules import KDJ
@@ -31,8 +30,7 @@ class KdjNotifyRobot(ExApiRobot):
     kline = {}
     notifies = {}
     notifyed = []
-    template_id = '792028'
-
+    template_id = None
 
     async def __fetch_ohlcv(self, timeframe='15m'):
         if self.exapi:
@@ -45,8 +43,7 @@ class KdjNotifyRobot(ExApiRobot):
                 self.kline[timeframe] = kline
 
     def __notify(self, *args):
-        print("send sms notify:" + args)
-
+        self.logger.info("send sms notify:" + args)
 
     async def notify_schedule(self):
         fail_times = 0
@@ -68,7 +65,6 @@ class KdjNotifyRobot(ExApiRobot):
                         self.is_ready = True if fail_times < self.fail_times_limit else False
                         await asyncio.sleep(1)
 
-
     async def kdj_schedule(self):
         while self.is_ready:
             for k in self.kline.keys():
@@ -89,13 +85,11 @@ class KdjNotifyRobot(ExApiRobot):
                         'val4': k,
                         'last_timestamp': kl[-1][0]
                     }
+                    self.logger.info("update notifies: %s" % str(self.notifies))
                 try:
                     await asyncio.sleep(1)
                 except:
                     self.logger.error("kdj schedule fail:%s" % str(traceback.format_exc()))
-
-
-
 
     async def ohlcv_schedule(self):
         fail_times = 0
@@ -110,10 +104,6 @@ class KdjNotifyRobot(ExApiRobot):
             finally:
                 self.is_ready = True if fail_times < self.fail_times_limit else False
                 await asyncio.sleep(self.normal_schedule_time)
-
-
-
-
 
     def start(self):
         # 检查所需模块
@@ -130,7 +120,7 @@ class KdjNotifyRobot(ExApiRobot):
             self.is_ready = True
             self.logger.info("**********Start brush flow robot!**********")
             task = []
-            task.append(asyncio.ensure_future(self.trades_scheduler()))
+            task.append(asyncio.ensure_future(self.ohlcv_schedule()))
             task.append(asyncio.ensure_future(self.notify_schedule()))
             task.append(asyncio.ensure_future(self.kdj_schedule()))
 
@@ -154,7 +144,11 @@ def main(exapi):
     # add formatter to ch
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    # module = BrushFlow(0.000001, 0.000001)
-    # module.logger = logger
-    robot = KdjNotifyRobot(exapi)
+    module = TencentSMS('apikey', 'secret', 'xxxx', 'xxxx', ['+86184xxxxxxxx'])
+    module.logger = logger
+    robot = KdjNotifyRobot(exapi, module, {
+        'logger': logger,
+        'symbol': 'BTC/USDT',
+        'template_id': '792028'
+    })
     robot.start()
