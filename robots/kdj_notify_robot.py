@@ -43,7 +43,7 @@ class KdjNotifyRobot(ExApiRobot):
             else:
                 self.kline[timeframe] = kline
                 self.logger.info('add kline, key:%s' % timeframe)
-            self.logger.info("kline keys:" + self.kline.keys())
+            self.logger.info("kline keys:%s" % str(self.kline.keys()))
 
     def __notify(self, *args):
         self.logger.info("send sms notify:" + args)
@@ -72,7 +72,7 @@ class KdjNotifyRobot(ExApiRobot):
 
     async def kdj_schedule(self):
         while self.is_ready:
-            self.logger.info("kdj_schedule keys:" + self.kline.keys)
+            self.logger.info("kdj_schedule keys:%s" % str(self.kline.keys))
             for k in self.kline.keys():
                 kl = self.kline.get(k)
                 self.logger.info("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
