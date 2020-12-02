@@ -118,7 +118,7 @@ class KdjNotifyRobot(ExApiRobot):
             return
         try:
             self.is_ready = True
-            self.logger.info("**********Start brush flow robot!**********")
+            self.logger.info("**********Start KDJ notify robot robot!**********")
             task = []
             task.append(asyncio.ensure_future(self.ohlcv_schedule()))
             task.append(asyncio.ensure_future(self.notify_schedule()))

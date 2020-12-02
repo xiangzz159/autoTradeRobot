@@ -26,3 +26,4 @@ docker build -t robotimage .
 
 docker run -d -h robot --name robot --net quantitative --restart always --privileged=true -v /home/admin/autoTradeRobot:/src robotimage python3 -u /src/run.py
 docker run -d -h data_collection --name data_collection --net quantitative --restart always --privileged=true -v /home/admin/autoTradeRobot:/src robotimage python3 -u /src/data_collection.py
+docker run -d -h kdj_sms --name kdj_sms --net quantitative --restart always --privileged=true -v /home/admin/autoTradeRobot:/src robotimage python3 -u /src/smsRun.py
