@@ -39,8 +39,10 @@ class KdjNotifyRobot(ExApiRobot):
             if kline_ is not None:
                 if kline[-1][0] != kline_[-1][0]:
                     self.kline[timeframe] = kline
+                    self.logger.info('update kline, key:%s' % timeframe)
             else:
                 self.kline[timeframe] = kline
+                self.logger.info('update kline, key:%s' % timeframe)
 
     def __notify(self, *args):
         self.logger.info("send sms notify:" + args)
