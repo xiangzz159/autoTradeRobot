@@ -89,3 +89,7 @@ class TencentSMS(object):
             print(err)
 
 
+if __name__ == '__main__':
+    sms = TencentSMS('', '', '1400456419', '329562', ['+8618*********'])
+    res = sms.send('792028', 'huobipro', 'BTCUSDT', '金', '15m')
+    print(res)
