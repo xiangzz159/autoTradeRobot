@@ -66,7 +66,7 @@ class KdjNotifyRobot(ExApiRobot):
                         v_ = self.notifyed.get(k)
                         if v_ is None or v['last_timestamp'] != v_['last_timestamp']:
                             # SMS通知
-                            result = self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
+                            result = self.__notify(v['val1'], v['val2'], v['val3'], v['val4'])
                             self.logger.debug("get sms response:%s" % result)
                             # 放入已通知列表
                             self.logger.info("notifyed update key:%s" % k)
