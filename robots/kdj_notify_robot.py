@@ -48,7 +48,9 @@ class KdjNotifyRobot(ExApiRobot):
             # self.logger.info("kline keys:%s" % str(self.kline.keys()))
 
     def __notify(self, val1, val2, val3, val4):
+        # Todo need delete
         logging.info('send notify:', val1, val2, val3, val4)
+        return "Success"
         # return self.module.send(self.templateId, val1, val2, val3, val4)
 
     async def notify_schedule(self):
@@ -92,8 +94,10 @@ class KdjNotifyRobot(ExApiRobot):
                     if notify is not None and notify.get('last_timestamp') == kl[-1][0]:
                         continue
                     row = KDJ.analyze(kl)
-                    self.logger.info('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']) )
+                    self.logger.debug('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']))
                     if row['signal'] != 'wait':
+                        self.logger.info(
+                            'kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']))
                         signal = '金' if row['signal'] == 'long' else '死'
                         ex_name = self.exapi.id
                         self.notifies[k] = {
