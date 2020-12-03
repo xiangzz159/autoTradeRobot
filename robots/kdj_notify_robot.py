@@ -32,6 +32,7 @@ class KdjNotifyRobot(ExApiRobot):
     notifyed = {}
     template_id = None
     fail_times_limit = 10
+    templateId = None
 
     async def __fetch_ohlcv(self, timeframe='15m'):
         if self.exapi:
@@ -44,19 +45,20 @@ class KdjNotifyRobot(ExApiRobot):
             else:
                 self.kline[timeframe] = kline
                 self.logger.info('add kline, key:%s' % timeframe)
-            self.logger.info("kline keys:%s" % str(self.kline.keys()))
+            # self.logger.info("kline keys:%s" % str(self.kline.keys()))
 
-    def __notify(self, *args):
-        self.logger.info("send sms notify:" + str(args))
+    def __notify(self, val1, val2, val3, val4):
+        logging.info('send notify:', val1, val2, val3, val4)
+        # return self.module.send(self.templateId, val1, val2, val3, val4)
 
     async def notify_schedule(self):
         fail_times = 0
         while self.is_ready:
             keys = self.notifies.keys()
-            self.logger.info("notify_schedule keys:%s" % str(keys))
+            self.logger.debug("notify_schedule keys:%s" % str(keys))
             if len(keys) == 0:
                 self.is_ready = True
-                await asyncio.sleep(5)
+                await asyncio.sleep(60)
             else:
                 for k in keys:
                     try:
@@ -64,9 +66,8 @@ class KdjNotifyRobot(ExApiRobot):
                         v_ = self.notifyed.get(k)
                         if v_ is None or v['last_timestamp'] != v_['last_timestamp']:
                             # SMS通知
-                            self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
-                            # Todo 返回判断
-
+                            result = self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
+                            self.logger.debug("get sms response:%s" % result)
                             # 放入已通知列表
                             self.logger.info("notifyed update key:%s" % k)
                             self.notifyed[k] = v
@@ -80,11 +81,11 @@ class KdjNotifyRobot(ExApiRobot):
 
     async def kdj_schedule(self):
         while self.is_ready:
-            self.logger.info("kdj_schedule keys:%s" % str(self.kline.keys()))
+            self.logger.debug("kdj_schedule keys:%s" % str(self.kline.keys()))
             try:
                 for k in self.kline.keys():
                     kl = self.kline.get(k)
-                    self.logger.info("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
+                    self.logger.debug("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
                     notify = self.notifies.get(k)
                     if self.kline.get(k) is None:
                         continue
@@ -102,7 +103,7 @@ class KdjNotifyRobot(ExApiRobot):
                             'val4': k,
                             'last_timestamp': kl[-1][0]
                         }
-                        self.logger.info("kdj_schedule-update notifies: %s" % str(self.notifies))
+                        self.logger.debug("kdj_schedule-update notifies: %s" % str(self.notifies))
             except:
                 self.logger.error("kdj schedule fail:%s" % str(traceback.format_exc()))
             finally:

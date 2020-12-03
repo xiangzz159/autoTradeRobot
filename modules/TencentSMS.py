@@ -43,9 +43,9 @@ class TencentSMS(object):
             # 非必要步骤:
             # 实例化一个客户端配置对象，可以指定超时时间等配置
             clientProfile = ClientProfile()
-            # clientProfile.signMethod = "TC3-HMAC-SHA256"  # 指定签名算法
-            # clientProfile.language = "en-US"
-            # clientProfile.httpProfile = httpProfile
+            clientProfile.signMethod = "TC3-HMAC-SHA256"  # 指定签名算法
+            clientProfile.language = "en-US"
+            clientProfile.httpProfile = httpProfile
             # 实例化 SMS 的 client 对象
             # 第二个参数是地域信息，可以直接填写字符串 ap-guangzhou，或者引用预设的常量
             client = sms_client.SmsClient(cred, "ap-guangzhou", clientProfile)
@@ -83,7 +83,7 @@ class TencentSMS(object):
             # 通过 client 对象调用 SendSms 方法发起请求。注意请求方法名与请求对象是对应的
             resp = client.SendSms(req)
             # 输出 JSON 格式的字符串回包
-            print(resp.to_json_string(indent=2))
+            # print(resp.to_json_string(indent=2))
             return resp.to_json_string(indent=2)
         except TencentCloudSDKException as err:
             print(err)
