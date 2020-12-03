@@ -29,7 +29,7 @@ class KdjNotifyRobot(ExApiRobot):
     normal_schedule_time = 5
     kline = {}
     notifies = {}
-    notifyed = []
+    notifyed = {}
     template_id = None
     fail_times_limit = 10
 
@@ -52,19 +52,25 @@ class KdjNotifyRobot(ExApiRobot):
     async def notify_schedule(self):
         fail_times = 0
         while self.is_ready:
-            for k in self.notifies.keys():
-                v = self.notifies.get(k)
-                if str(v.get('last_timestamp')) + '-' + k not in self.notifyed:
+            keys = self.notifies.keys()
+            self.logger.info("notify_schedule keys:%s" % str(keys))
+            if len(keys) == 0:
+                self.is_ready = True
+                await asyncio.sleep(5)
+            else:
+                for k in keys:
                     try:
-                        # SMS通知
-                        self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
-                        # 放入已通知列表
-                        if len(self.notifyed) > 10:
-                            self.logger.info("notifyed length is more than 10")
-                            self.notifyed = self.notifyed[-10:]
-                        self.logger.info("notifyed append key:%s" % (str(v.get('last_timestamp')) + '-' + k))
-                        self.notifyed.append(str(v.get('last_timestamp')) + '-' + k)
-                        fail_times = 0
+                        v = self.notifies.get(k)
+                        v_ = self.notifyed.get(k)
+                        if v_ is None or v['last_timestamp'] != v_['last_timestamp']:
+                            # SMS通知
+                            self.__notify(v['last_timestamp'], v['val1'], v['val2'], v['val3'], v['val4'], )
+                            # Todo 返回判断
+
+                            # 放入已通知列表
+                            self.logger.info("notifyed update key:%s" % k)
+                            self.notifyed[k] = v
+                            fail_times = 0
                     except:
                         self.logger.error("notify schedule fail:%s" % str(traceback.format_exc()))
                         fail_times += 1
