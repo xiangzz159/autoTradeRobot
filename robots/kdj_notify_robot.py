@@ -15,10 +15,8 @@
 
 import logging
 import asyncio
-import random
 from robots.robot import ExApiRobot
 from modules.TencentSMS import TencentSMS
-import time
 import traceback
 from modules import KDJ
 
@@ -60,8 +58,8 @@ class KdjNotifyRobot(ExApiRobot):
                 self.is_ready = True
                 await asyncio.sleep(60)
             else:
-                for k in keys:
-                    try:
+                try:
+                    for k in keys:
                         v = self.notifies.get(k)
                         v_ = self.notifyed.get(k)
                         if v_ is None or v['last_timestamp'] != v_['last_timestamp']:
@@ -72,12 +70,12 @@ class KdjNotifyRobot(ExApiRobot):
                             self.logger.info("notifyed update key:%s" % k)
                             self.notifyed[k] = v
                             fail_times = 0
-                    except:
-                        self.logger.error("notify schedule fail:%s" % str(traceback.format_exc()))
-                        fail_times += 1
-                    finally:
-                        self.is_ready = True if fail_times < self.fail_times_limit else False
-                        await asyncio.sleep(1)
+                except:
+                    self.logger.error("notify schedule fail:%s" % str(traceback.format_exc()))
+                    fail_times += 1
+                finally:
+                    self.is_ready = True if fail_times < self.fail_times_limit else False
+                    await asyncio.sleep(1)
 
     async def kdj_schedule(self):
         while self.is_ready:
@@ -151,7 +149,6 @@ class KdjNotifyRobot(ExApiRobot):
 
     def exit(self):
         self.is_ready = False
-        self.__clear_cache()
 
 
 def main(exapi):
