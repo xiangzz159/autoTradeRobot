@@ -49,7 +49,7 @@ class KdjNotifyRobot(ExApiRobot):
 
     def __notify(self, val1, val2, val3, val4):
         # Todo need delete
-        logging.info('send notify:', val1, val2, val3, val4)
+        logging.info('send notify:%s', val1 + " " + val2 + " " + val3 + " " + val4)
         return "Success"
         # return self.module.send(self.templateId, val1, val2, val3, val4)
 
