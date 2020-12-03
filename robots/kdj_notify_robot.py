@@ -48,10 +48,8 @@ class KdjNotifyRobot(ExApiRobot):
             # self.logger.info("kline keys:%s" % str(self.kline.keys()))
 
     def __notify(self, val1, val2, val3, val4):
-        # Todo need delete
-        logging.info('send notify:%s', val1 + " " + val2 + " " + val3 + " " + val4)
-        return "Success"
-        # return self.module.send(self.templateId, val1, val2, val3, val4)
+        logging.info('send sms:%s', val1 + " " + val2 + " " + val3 + " " + val4)
+        return self.module.send(self.templateId, val1, val2, val3, val4)
 
     async def notify_schedule(self):
         fail_times = 0
