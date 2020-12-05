@@ -40,10 +40,10 @@ class KdjNotifyRobot(ExApiRobot):
                 if kline_ is not None:
                     if kline[-1][0] != kline_[-1][0]:
                         self.kline[symbol + '_' + timeframe] = kline
-                        self.logger.info('update kline, key:%s' % timeframe)
+                        self.logger.debug('update kline, key:%s' % symbol + '_' + timeframe)
                 else:
                     self.kline[symbol + '_' + timeframe] = kline
-                    self.logger.info('add kline, key:%s' % timeframe)
+                    self.logger.debug('add kline, key:%s' % symbol + '_' + timeframe)
                 # self.logger.info("kline keys:%s" % str(self.kline.keys()))
 
     def __notify(self, val1, val2, val3, val4, val5):
@@ -83,30 +83,29 @@ class KdjNotifyRobot(ExApiRobot):
             self.logger.debug("kdj_schedule keys:%s" % str(self.kline.keys()))
             try:
                 for k in self.kline.keys():
-                    for symbol in self.symbols:
-                        kl = self.kline.get(symbol + '_' + k)
-                        self.logger.debug("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
-                        notify = self.notifies.get(symbol + '_' + k)
-                        if kl is None:
-                            continue
-                        if notify is not None and notify.get('last_timestamp') == kl[-1][0]:
-                            continue
-                        row = KDJ.analyze(kl)
-                        self.logger.debug('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']))
-                        if row['signal'] != 'wait':
-                            self.logger.info(
-                                'kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']))
-                            signal = '金' if row['signal'] == 'long' else '死'
-                            ex_name = self.exapi.id
-                            self.notifies[symbol + '_' + k] = {
-                                'val1': ex_name,
-                                'val2': symbol,
-                                'val3': signal,
-                                'val4': str(row['close']),
-                                'val5': k,
-                                'last_timestamp': kl[-1][0]
-                            }
-                            self.logger.debug("kdj_schedule-update notifies: %s" % str(self.notifies))
+                    kl = self.kline.get(k)
+                    self.logger.debug("kdj_schedule-key:%s, kline:%s" % (k, str(kl[-1])))
+                    notify = self.notifies.get(k)
+                    if kl is None:
+                        continue
+                    if notify is not None and notify.get('last_timestamp') == kl[-1][0]:
+                        continue
+                    row = KDJ.analyze(kl)
+                    self.logger.debug('kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']))
+                    if row['signal'] != 'wait':
+                        self.logger.info(
+                            'kdj_schedule-timestamp:%s, signal:%s' % (str(row['timestamp']), row['signal']))
+                        signal = '金' if row['signal'] == 'long' else '死'
+                        ex_name = self.exapi.id
+                        self.notifies[k] = {
+                            'val1': ex_name,
+                            'val2': k.split('_')[0],
+                            'val3': signal,
+                            'val4': str(row['close']),
+                            'val5': k,
+                            'last_timestamp': kl[-1][0]
+                        }
+                        self.logger.debug("kdj_schedule-update notifies: %s" % str(self.notifies))
             except:
                 self.logger.error("kdj schedule fail:%s" % str(traceback.format_exc()))
             finally:
