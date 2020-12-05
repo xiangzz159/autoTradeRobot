@@ -46,9 +46,9 @@ class KdjNotifyRobot(ExApiRobot):
                     self.logger.info('add kline, key:%s' % timeframe)
                 # self.logger.info("kline keys:%s" % str(self.kline.keys()))
 
-    def __notify(self, val1, val2, val3, val4):
-        logging.info('send sms:%s', val1 + " " + val2 + " " + val3 + " " + val4)
-        return self.module.send(self.templateId, val1, val2, val3, val4)
+    def __notify(self, val1, val2, val3, val4, val5):
+        logging.info('send sms:%s', val1 + " " + val2 + " " + val3 + " " + val4 + " " +val5)
+        return self.module.send(self.templateId, val1, val2, val3, val4, val5)
 
     async def notify_schedule(self):
         fail_times = 0
@@ -163,9 +163,9 @@ def main(exapi):
     # add formatter to ch
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    module = TencentSMS('apikey', 'secret', 'xxxx', 'xxxx', ['+86184xxxxxxxx'])
-    module.logger = logger
-    robot = KdjNotifyRobot(exapi, module, {
+    sms = TencentSMS('*', '*', '*', '*', ['+86*'])
+    sms.logger = logger
+    robot = KdjNotifyRobot(exapi, sms, {
         'logger': logger,
         'symbols': ['BTC/USDT', 'ETH/USDT'],
         'templateId': '794664'

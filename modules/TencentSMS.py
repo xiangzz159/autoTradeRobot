@@ -90,6 +90,6 @@ class TencentSMS(object):
 
 
 if __name__ == '__main__':
-    sms = TencentSMS('', '', '1400456419', '329562', ['+8618*********'])
+    sms = TencentSMS('*', '*', '*', '*', ['+86*'])
     res = sms.send('792028', 'huobipro', 'BTCUSDT', '金', '15m')
     print(res)
